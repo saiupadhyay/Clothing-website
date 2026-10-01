@@ -14,6 +14,7 @@ dist-ssr
 .env
 .env.*
 !.env.example
+mongo id*.png
 
 # Editor directories and files
 .vscode/*

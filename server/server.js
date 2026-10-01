@@ -59,7 +59,7 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`
   ╔════════════════════════════════════════════════════════════╗
   ║          BLACKFITS LUXURY STREETWEAR BACKEND API           ║
@@ -71,3 +71,14 @@ app.listen(PORT, () => {
   ╚════════════════════════════════════════════════════════════╝
   `);
 });
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n⚠️  Port ${PORT} is already in use by another running Node process.`);
+    console.error(`👉 Run this in PowerShell to free port ${PORT}:`);
+    console.error(`   Get-Process -Id (Get-NetTCPConnection -LocalPort ${PORT}).OwningProcess | Stop-Process -Force\n`);
+  } else {
+    console.error('Server error:', err);
+  }
+});
+

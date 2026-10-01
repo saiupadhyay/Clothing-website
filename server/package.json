@@ -9,7 +9,13 @@
     "dev": "node --watch server.js",
     "seed": "node seed.js"
   },
-  "keywords": ["ecommerce", "mongodb", "cloudinary", "express", "blackfits"],
+  "keywords": [
+    "ecommerce",
+    "mongodb",
+    "cloudinary",
+    "express",
+    "blackfits"
+  ],
   "author": "BlackFits",
   "license": "ISC",
   "dependencies": {
@@ -20,7 +26,6 @@
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.5",
-    "multer": "^1.4.5-lts.1",
-    "multer-storage-cloudinary": "^4.0.0"
+    "multer": "^1.4.5-lts.1"
   }
 }
