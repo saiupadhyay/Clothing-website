@@ -9,6 +9,7 @@ dotenv.config();
 
 const INITIAL_PRODUCTS = [
   {
+    customId: 'bf-01',
     name: 'ONYX HEAVYWEIGHT OVERSIZED TEE',
     subtitle: '280 GSM Combed French Terry Cotton',
     price: 1299,
@@ -43,6 +44,7 @@ const INITIAL_PRODUCTS = [
     tag: 'SIGNATURE DROP'
   },
   {
+    customId: 'bf-02',
     name: 'OBSIDIAN BOXYFIT ESSENTIAL TEE',
     subtitle: '260 GSM Japanese Ring-Spun Cotton',
     price: 1399,
@@ -72,6 +74,7 @@ const INITIAL_PRODUCTS = [
     tag: 'BOXYFIT'
   },
   {
+    customId: 'bf-03',
     name: 'ACID FADE PHANTOM STANDARD TEE',
     subtitle: '240 GSM Mineral Acid-Washed Cotton',
     price: 1499,
@@ -100,6 +103,7 @@ const INITIAL_PRODUCTS = [
     tag: 'ACID WASH'
   },
   {
+    customId: 'bf-04',
     name: 'MONOLITH GYM T-SHIRT SCULPTED ATHLETIC',
     subtitle: '230 GSM Stretch Gym T-Shirt Performance Blend',
     price: 1199,

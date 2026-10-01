@@ -708,8 +708,9 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setProducts((prev) => [newProduct, ...prev]);
     try {
       const created = await api.createProduct(newProduct);
-      if (created && created.id) {
-        setProducts((prev) => prev.map((p) => (p.id === newProduct.id ? created : p)));
+      if (created) {
+        const realId = (created as any)._id ? (created as any)._id.toString() : created.id;
+        setProducts((prev) => prev.map((p) => (p.id === newProduct.id ? { ...created, id: realId } : p)));
       }
     } catch (err) {
       console.warn('API sync failed, saved product locally:', err);
@@ -719,7 +720,11 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProduct = async (updated: Product) => {
     setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
     try {
-      await api.updateProduct(updated.id, updated);
+      const saved = await api.updateProduct(updated.id, updated);
+      if (saved) {
+        const realId = (saved as any)._id ? (saved as any)._id.toString() : saved.id;
+        setProducts((prev) => prev.map((p) => (p.id === updated.id ? { ...saved, id: realId } : p)));
+      }
     } catch (err) {
       console.warn('API sync failed, updated product locally:', err);
     }

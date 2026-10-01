@@ -10,6 +10,12 @@ const sizeStockSchema = new mongoose.Schema({
 }, { _id: false });
 
 const productSchema = new mongoose.Schema({
+  customId: {
+    type: String,
+    sparse: true,
+    trim: true,
+    index: true
+  },
   name: { 
     type: String, 
     required: [true, 'Please provide product name'], 
