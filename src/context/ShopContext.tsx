@@ -21,7 +21,18 @@ interface ShopContextType {
   cart: CartItem[];
   wishlist: string[];
   orders: Order[];
-  user: UserProfile;
+  user: UserProfile | null;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  authModalOpen: boolean;
+  setAuthModalOpen: (open: boolean) => void;
+  authMode: 'login' | 'register';
+  setAuthMode: (mode: 'login' | 'register') => void;
+  adminLoginIntent: boolean;
+  setAdminLoginIntent: (intent: boolean) => void;
+  login: (credentials: { email: string; password: string }) => Promise<{ success: boolean; message?: string }>;
+  register: (userData: any) => Promise<{ success: boolean; message?: string }>;
+  logout: () => void;
   activeTab: 'shop' | 'dashboard' | 'admin' | 'lookbook';
   setActiveTab: (tab: 'shop' | 'dashboard' | 'admin' | 'lookbook') => void;
   cartOpen: boolean;
@@ -146,8 +157,8 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return INITIAL_ORDERS;
   });
 
-  // User Profile
-  const [user, setUser] = useState<UserProfile>(() => {
+  // User Profile & Authentication State
+  const [user, setUser] = useState<UserProfile | null>(() => {
     try {
       const saved = localStorage.getItem('bf_user');
       if (saved) {
@@ -155,8 +166,80 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { ...parsed, preferredFit: normalizeFit(parsed.preferredFit as string) };
       }
     } catch (e) {}
-    return INITIAL_USER;
+    return null;
   });
+
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [adminLoginIntent, setAdminLoginIntent] = useState(false);
+
+  const isAuthenticated = !!user;
+  const isAdmin = user?.role === 'admin';
+
+  // Verify session on mount with token if present
+  useEffect(() => {
+    const verifySession = async () => {
+      try {
+        const me = await api.getMe();
+        if (me) {
+          const verifiedUser: UserProfile = {
+            ...me,
+            preferredFit: normalizeFit(me.preferredFit as string),
+            preferredSize: me.preferredSize || 'L',
+            addresses: me.addresses || []
+          };
+          setUser(verifiedUser);
+          localStorage.setItem('bf_user', JSON.stringify(verifiedUser));
+        }
+      } catch (err) {
+        // Token invalid or network offline
+      }
+    };
+    verifySession();
+  }, []);
+
+  const login = async (credentials: { email: string; password: string }) => {
+    try {
+      const res = await api.login(credentials);
+      const userProfile: UserProfile = {
+        ...res.user,
+        preferredFit: normalizeFit(res.user.preferredFit as string),
+        preferredSize: res.user.preferredSize || 'L',
+        addresses: res.user.addresses || []
+      };
+      setUser(userProfile);
+      localStorage.setItem('bf_user', JSON.stringify(userProfile));
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Login failed' };
+    }
+  };
+
+  const register = async (userData: any) => {
+    try {
+      const res = await api.register(userData);
+      const userProfile: UserProfile = {
+        ...res.user,
+        preferredFit: normalizeFit(res.user.preferredFit as string),
+        preferredSize: res.user.preferredSize || 'L',
+        addresses: res.user.addresses || []
+      };
+      setUser(userProfile);
+      localStorage.setItem('bf_user', JSON.stringify(userProfile));
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Registration failed' };
+    }
+  };
+
+  const logout = () => {
+    api.logout();
+    setUser(null);
+    localStorage.removeItem('bf_user');
+    if (activeTab === 'admin') {
+      setActiveTab('shop');
+    }
+  };
 
   // Modals and UI state
   const [activeTab, setActiveTab] = useState<'shop' | 'dashboard' | 'admin' | 'lookbook'>('shop');
@@ -572,32 +655,52 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // User profile
   const updateProfile = (profile: Partial<UserProfile>) => {
-    setUser((prev) => ({ ...prev, ...profile }));
+    setUser((prev) => {
+      const base = prev || INITIAL_USER;
+      const updated: UserProfile = { ...base, ...profile };
+      localStorage.setItem('bf_user', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const addAddress = (newAddr: Omit<Address, 'id'>) => {
     const id = `addr-${Date.now()}`;
-    setUser((prev) => ({
-      ...prev,
-      addresses: [...prev.addresses, { ...newAddr, id }],
-    }));
+    setUser((prev) => {
+      const base = prev || INITIAL_USER;
+      const updated: UserProfile = {
+        ...base,
+        addresses: [...(base.addresses || []), { ...newAddr, id }],
+      };
+      localStorage.setItem('bf_user', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const deleteAddress = (id: string) => {
-    setUser((prev) => ({
-      ...prev,
-      addresses: prev.addresses.filter((a) => a.id !== id),
-    }));
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated: UserProfile = {
+        ...prev,
+        addresses: (prev.addresses || []).filter((a) => a.id !== id),
+      };
+      localStorage.setItem('bf_user', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const setDefaultAddress = (id: string) => {
-    setUser((prev) => ({
-      ...prev,
-      addresses: prev.addresses.map((a) => ({
-        ...a,
-        isDefault: a.id === id,
-      })),
-    }));
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated: UserProfile = {
+        ...prev,
+        addresses: (prev.addresses || []).map((a) => ({
+          ...a,
+          isDefault: a.id === id,
+        })),
+      };
+      localStorage.setItem('bf_user', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   // Admin Actions with MongoDB Atlas synchronization
@@ -677,6 +780,17 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         wishlist,
         orders,
         user,
+        isAuthenticated,
+        isAdmin,
+        authModalOpen,
+        setAuthModalOpen,
+        authMode,
+        setAuthMode,
+        adminLoginIntent,
+        setAdminLoginIntent,
+        login,
+        register,
+        logout,
         activeTab,
         setActiveTab,
         cartOpen,

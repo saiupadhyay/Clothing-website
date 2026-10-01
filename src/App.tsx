@@ -7,6 +7,7 @@ import { ProductGrid } from './components/ProductGrid';
 import { ProductDetailModal } from './components/ProductDetailModal';
 import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
+import { AuthModal } from './components/AuthModal';
 import { UserDashboard } from './components/UserDashboard';
 import { AdminPanel } from './components/AdminPanel';
 import { LookbookFeed } from './components/LookbookFeed';
@@ -63,6 +64,7 @@ const AppContent: React.FC = () => {
       <ProductDetailModal />
       <CartDrawer />
       <CheckoutModal />
+      <AuthModal />
 
       {/* Mobile App Navigation Bar */}
       <MobileBottomNav />

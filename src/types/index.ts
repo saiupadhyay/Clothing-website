@@ -95,9 +95,11 @@ export interface Address {
 }
 
 export interface UserProfile {
+  id?: string;
   name: string;
   email: string;
   phone: string;
+  role?: 'customer' | 'admin';
   preferredFit: FitType;
   preferredSize: SizeType;
   addresses: Address[];

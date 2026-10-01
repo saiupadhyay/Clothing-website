@@ -21,12 +21,19 @@ import {
 } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
 import { Order, SizeType, FitType, Address } from '../types';
+import { INITIAL_USER } from '../data/mockProducts';
 import { formatPrice } from '../utils/formatPrice';
 
 export const UserDashboard: React.FC = () => {
   const { 
     orders, 
     user, 
+    isAuthenticated,
+    isAdmin,
+    setAuthModalOpen,
+    setAuthMode,
+    setAdminLoginIntent,
+    logout,
     updateProfile, 
     addAddress, 
     deleteAddress, 
@@ -38,17 +45,30 @@ export const UserDashboard: React.FC = () => {
     setQuickViewProduct
   } = useShop();
 
+  const currentUser = user || INITIAL_USER;
+
   const [activeSubTab, setActiveSubTab] = useState<'orders' | 'profile' | 'addresses' | 'wishlist'>('orders');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(orders[0] || null);
   const [copiedTracking, setCopiedTracking] = useState(false);
 
-  // Profile Form state
-  const [name, setName] = useState(user.name);
-  const [email, setEmail] = useState(user.email);
-  const [phone, setPhone] = useState(user.phone);
-  const [preferredFit, setPreferredFit] = useState<FitType>(user.preferredFit);
-  const [preferredSize, setPreferredSize] = useState<SizeType>(user.preferredSize);
+  // Profile Form state initialized safely from currentUser
+  const [name, setName] = useState(currentUser.name);
+  const [email, setEmail] = useState(currentUser.email);
+  const [phone, setPhone] = useState(currentUser.phone);
+  const [preferredFit, setPreferredFit] = useState<FitType>(currentUser.preferredFit);
+  const [preferredSize, setPreferredSize] = useState<SizeType>(currentUser.preferredSize);
   const [profileSavedFeedback, setProfileSavedFeedback] = useState(false);
+
+  // Synchronize form fields whenever authenticated user session updates
+  React.useEffect(() => {
+    if (user) {
+      setName(user.name);
+      setEmail(user.email);
+      setPhone(user.phone || '');
+      setPreferredFit(user.preferredFit || 'Oversized');
+      setPreferredSize(user.preferredSize || 'L');
+    }
+  }, [user]);
 
   // Address modal form
   const [showAddAddress, setShowAddAddress] = useState(false);
@@ -82,13 +102,13 @@ export const UserDashboard: React.FC = () => {
     e.preventDefault();
     if (!newAddrStreet || !newAddrCity) return;
     addAddress({
-      name: newAddrName || `${user.name} (Address)`,
+      name: newAddrName || `${currentUser.name} (Address)`,
       street: newAddrStreet,
       city: newAddrCity,
       state: newAddrState || 'NY',
       postalCode: newAddrZip,
       country: 'United States',
-      phone: newAddrPhone || user.phone,
+      phone: newAddrPhone || currentUser.phone,
       isDefault: false
     });
     setShowAddAddress(false);
@@ -105,6 +125,71 @@ export const UserDashboard: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       
+      {/* Auth Status Notification Banner */}
+      {!isAuthenticated ? (
+        <div className="bg-gradient-to-r from-zinc-900 via-zinc-900 to-zinc-950 border border-zinc-800 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 shadow-xl">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-amber-400 flex-shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold">
+                  GUEST SESSION DETECTED
+                </span>
+                <span className="text-[10px] font-mono text-zinc-600">•</span>
+                <span className="text-[10px] font-mono text-zinc-400">PREVIEW MODE</span>
+              </div>
+              <p className="text-xs text-zinc-300 mt-0.5">
+                Sign in to your BlackFits account or create one to save personal fit profiles, sync orders to MongoDB, and access VIP courier tracking.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setAdminLoginIntent(false);
+                setAuthMode('login');
+                setAuthModalOpen(true);
+              }}
+              className="px-5 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-heading font-black text-xs uppercase tracking-wider transition-colors shadow-md flex items-center gap-1.5"
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>Sign In / Register</span>
+            </button>
+          </div>
+        </div>
+      ) : isAdmin ? (
+        <div className="bg-gradient-to-r from-amber-950/30 via-zinc-900 to-zinc-950 border border-amber-500/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 shadow-xl">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-500/40 flex items-center justify-center text-amber-400 flex-shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold">
+                  EXECUTIVE ADMIN ACTIVE
+                </span>
+                <span className="text-[10px] font-mono text-zinc-600">•</span>
+                <span className="text-[10px] font-mono text-emerald-400 font-semibold">ROOT ACCESS</span>
+              </div>
+              <p className="text-xs text-zinc-300 mt-0.5">
+                Logged in as master administrator ({user?.email}). You have authorized access to the BlackFits Store Command Portal.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setActiveTab('admin')}
+            className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-zinc-950 font-heading font-black text-xs uppercase tracking-wider transition-colors shadow-md flex items-center gap-1.5 self-start sm:self-auto"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Open Admin Panel</span>
+          </button>
+        </div>
+      ) : null}
+
       {/* Dashboard Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-800">
         <div>
@@ -112,21 +197,31 @@ export const UserDashboard: React.FC = () => {
             OBSIDIAN MEMBER TERMINAL
           </span>
           <h1 className="text-2xl sm:text-3xl font-heading font-black text-white tracking-tight mt-0.5">
-            WELCOME BACK, {user.name.toUpperCase()}
+            WELCOME BACK, {currentUser.name.toUpperCase()}
           </h1>
           <p className="text-xs text-zinc-400 font-mono mt-1">
-            Preferred Fit: <span className="text-white font-bold">{user.preferredFit}</span> • Preferred Size: <span className="text-white font-bold">{user.preferredSize}</span>
+            Preferred Fit: <span className="text-white font-bold">{currentUser.preferredFit}</span> • Preferred Size: <span className="text-white font-bold">{currentUser.preferredSize}</span>
           </p>
         </div>
 
-        {/* Quick action: Return to shop */}
-        <button
-          onClick={() => setActiveTab('shop')}
-          className="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 text-xs font-mono text-zinc-200 transition-colors flex items-center gap-1.5 self-start sm:self-auto"
-        >
-          <span>Continue Shopping</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
+        {/* Quick action: Return to shop or Sign out */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {isAuthenticated && (
+            <button
+              onClick={logout}
+              className="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-rose-950/30 border border-zinc-800 hover:border-rose-800 text-xs font-mono text-rose-400 transition-colors"
+            >
+              Sign Out
+            </button>
+          )}
+          <button
+            onClick={() => setActiveTab('shop')}
+            className="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 text-xs font-mono text-zinc-200 transition-colors flex items-center gap-1.5"
+          >
+            <span>Continue Shopping</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Tab Navigation Strip */}
@@ -134,7 +229,7 @@ export const UserDashboard: React.FC = () => {
         {[
           { id: 'orders', label: 'Order History & Live Tracking', icon: Package, badge: orders.length },
           { id: 'profile', label: 'Profile & Fit Preferences', icon: User },
-          { id: 'addresses', label: 'Saved Delivery Addresses', icon: MapPin, badge: user.addresses.length },
+          { id: 'addresses', label: 'Saved Delivery Addresses', icon: MapPin, badge: currentUser.addresses?.length || 0 },
           { id: 'wishlist', label: 'Saved Wishlist', icon: Heart, badge: wishlist.length },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -443,7 +538,7 @@ export const UserDashboard: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {user.addresses.map((addr) => (
+            {(currentUser.addresses || []).map((addr) => (
               <div key={addr.id} className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-4 flex flex-col justify-between space-y-3">
                 <div>
                   <div className="flex items-center justify-between mb-1">
@@ -469,7 +564,7 @@ export const UserDashboard: React.FC = () => {
                     </button>
                   ) : <span className="text-[10px] text-zinc-600 font-mono">Primary Delivery Destination</span>}
 
-                  {user.addresses.length > 1 && (
+                  {(currentUser.addresses || []).length > 1 && (
                     <button
                       onClick={() => deleteAddress(addr.id)}
                       className="text-zinc-500 hover:text-rose-400 p-1"
@@ -581,11 +676,11 @@ export const UserDashboard: React.FC = () => {
                     <span className="font-heading font-black text-sm text-white">{formatPrice(prod.price)}</span>
                   </div>
                   <button
-                    onClick={() => addToCart(prod, user.preferredSize, 1)}
+                    onClick={() => addToCart(prod, currentUser.preferredSize || 'L', 1)}
                     className="w-full py-2 rounded-xl bg-white text-zinc-950 text-xs font-bold hover:bg-zinc-200 transition-colors flex items-center justify-center gap-1.5"
                   >
                     <ShoppingBag className="w-3.5 h-3.5" />
-                    <span>Add to Bag (Size {user.preferredSize})</span>
+                    <span>Add to Bag (Size {currentUser.preferredSize || 'L'})</span>
                   </button>
                 </div>
               ))}

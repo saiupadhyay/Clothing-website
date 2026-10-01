@@ -1,6 +1,40 @@
-import { Product, LookbookPost, Order, OrderStatus } from '../types';
+import { Product, LookbookPost, Order, OrderStatus, UserProfile } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+const TOKEN_KEY = 'bf_auth_token';
+
+export const authStorage = {
+  getToken: (): string | null => {
+    try {
+      return localStorage.getItem(TOKEN_KEY);
+    } catch {
+      return null;
+    }
+  },
+  setToken: (token: string): void => {
+    try {
+      localStorage.setItem(TOKEN_KEY, token);
+    } catch {}
+  },
+  clearToken: (): void => {
+    try {
+      localStorage.removeItem(TOKEN_KEY);
+    } catch {}
+  }
+};
+
+const getHeaders = (isJson = true): Record<string, string> => {
+  const headers: Record<string, string> = {};
+  if (isJson) {
+    headers['Content-Type'] = 'application/json';
+  }
+  const token = authStorage.getToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
 
 export const api = {
   // --- HEALTH CHECK ---
@@ -12,6 +46,61 @@ export const api = {
     } catch {
       return false;
     }
+  },
+
+  // --- AUTHENTICATION ---
+  async login(credentials: { email: string; password: string }): Promise<{ token: string; user: UserProfile }> {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials)
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.message || 'Login failed. Invalid credentials.');
+    }
+    authStorage.setToken(json.token);
+    return json;
+  },
+
+  async register(userData: {
+    name: string;
+    email: string;
+    password: string;
+    phone?: string;
+    preferredFit?: string;
+    preferredSize?: string;
+    adminPasscode?: string;
+  }): Promise<{ token: string; user: UserProfile }> {
+    const res = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData)
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.message || 'Registration failed.');
+    }
+    authStorage.setToken(json.token);
+    return json;
+  },
+
+  async getMe(): Promise<UserProfile | null> {
+    const token = authStorage.getToken();
+    if (!token) return null;
+    const res = await fetch(`${API_BASE}/auth/me`, {
+      headers: getHeaders()
+    });
+    if (!res.ok) {
+      authStorage.clearToken();
+      return null;
+    }
+    const json = await res.json();
+    return json.user;
+  },
+
+  logout(): void {
+    authStorage.clearToken();
   },
 
   // --- PRODUCTS ---
@@ -28,7 +117,7 @@ export const api = {
   async createProduct(product: Partial<Product>): Promise<Product> {
     const res = await fetch(`${API_BASE}/products`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(product)
     });
     if (!res.ok) throw new Error('Failed to create product');
@@ -39,7 +128,7 @@ export const api = {
   async updateProduct(id: string, product: Partial<Product>): Promise<Product> {
     const res = await fetch(`${API_BASE}/products/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(product)
     });
     if (!res.ok) throw new Error('Failed to update product');
@@ -49,7 +138,8 @@ export const api = {
 
   async deleteProduct(id: string): Promise<void> {
     const res = await fetch(`${API_BASE}/products/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: getHeaders()
     });
     if (!res.ok) throw new Error('Failed to delete product');
   },
@@ -68,7 +158,7 @@ export const api = {
   async createLookbookPost(post: Partial<LookbookPost>): Promise<LookbookPost> {
     const res = await fetch(`${API_BASE}/lookbook`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(post)
     });
     if (!res.ok) throw new Error('Failed to create lookbook post');
@@ -79,7 +169,7 @@ export const api = {
   async updateLookbookPost(id: string, post: Partial<LookbookPost>): Promise<LookbookPost> {
     const res = await fetch(`${API_BASE}/lookbook/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(post)
     });
     if (!res.ok) throw new Error('Failed to update lookbook post');
@@ -89,14 +179,17 @@ export const api = {
 
   async deleteLookbookPost(id: string): Promise<void> {
     const res = await fetch(`${API_BASE}/lookbook/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: getHeaders()
     });
     if (!res.ok) throw new Error('Failed to delete lookbook post');
   },
 
   // --- ORDERS ---
   async getOrders(): Promise<Order[]> {
-    const res = await fetch(`${API_BASE}/orders`);
+    const res = await fetch(`${API_BASE}/orders`, {
+      headers: getHeaders()
+    });
     if (!res.ok) throw new Error('Failed to fetch orders');
     const json = await res.json();
     return (json.data || []).map((o: any) => ({
@@ -108,7 +201,7 @@ export const api = {
   async createOrder(orderPayload: any): Promise<Order> {
     const res = await fetch(`${API_BASE}/orders`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(orderPayload)
     });
     if (!res.ok) throw new Error('Failed to create order');
@@ -119,7 +212,7 @@ export const api = {
   async updateOrderStatus(orderId: string, status: OrderStatus): Promise<Order> {
     const res = await fetch(`${API_BASE}/orders/${orderId}/status`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify({ status })
     });
     if (!res.ok) throw new Error('Failed to update order status');
@@ -132,8 +225,15 @@ export const api = {
     const formData = new FormData();
     formData.append('image', file);
 
+    const token = authStorage.getToken();
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const res = await fetch(`${API_BASE}/upload/single`, {
       method: 'POST',
+      headers,
       body: formData
     });
 

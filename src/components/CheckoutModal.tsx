@@ -19,6 +19,7 @@ import {
 import confetti from 'canvas-confetti';
 import { useShop } from '../context/ShopContext';
 import { Address, Order } from '../types';
+import { INITIAL_USER } from '../data/mockProducts';
 import { formatPrice } from '../utils/formatPrice';
 
 export const CheckoutModal: React.FC = () => {
@@ -35,21 +36,23 @@ export const CheckoutModal: React.FC = () => {
     setActiveTab,
   } = useShop();
 
+  const currentUser = user || INITIAL_USER;
+
   const [step, setStep] = useState<'shipping' | 'delivery' | 'payment' | 'otp' | 'success'>('shipping');
 
   // Shipping details state
   const [selectedSavedAddrId, setSelectedSavedAddrId] = useState<string>(
-    user.addresses.find((a) => a.isDefault)?.id || user.addresses[0]?.id || 'custom'
+    currentUser.addresses?.find((a) => a.isDefault)?.id || currentUser.addresses?.[0]?.id || 'custom'
   );
 
   const [customAddress, setCustomAddress] = useState<Omit<Address, 'id'>>({
-    name: user.name,
-    street: user.addresses[0]?.street || '104 Obsidian Street',
-    city: user.addresses[0]?.city || 'New York',
-    state: user.addresses[0]?.state || 'NY',
-    postalCode: user.addresses[0]?.postalCode || '10001',
+    name: currentUser.name,
+    street: currentUser.addresses?.[0]?.street || '104 Obsidian Street',
+    city: currentUser.addresses?.[0]?.city || 'New York',
+    state: currentUser.addresses?.[0]?.state || 'NY',
+    postalCode: currentUser.addresses?.[0]?.postalCode || '10001',
     country: 'United States',
-    phone: user.phone || '+1 (555) 392-1002',
+    phone: currentUser.phone || '+1 (555) 392-1002',
   });
 
   // Delivery method
@@ -74,7 +77,7 @@ export const CheckoutModal: React.FC = () => {
 
   const currentAddress: Address =
     selectedSavedAddrId !== 'custom'
-      ? user.addresses.find((a) => a.id === selectedSavedAddrId) || { ...customAddress, id: 'temp-id' }
+      ? currentUser.addresses?.find((a) => a.id === selectedSavedAddrId) || { ...customAddress, id: 'temp-id' }
       : { ...customAddress, id: 'custom-id' };
 
   const getShippingCost = () => {
@@ -208,7 +211,7 @@ export const CheckoutModal: React.FC = () => {
 
             {/* Saved Addresses list */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {user.addresses.map((addr) => (
+              {(currentUser.addresses || []).map((addr) => (
                 <div
                   key={addr.id}
                   onClick={() => setSelectedSavedAddrId(addr.id)}

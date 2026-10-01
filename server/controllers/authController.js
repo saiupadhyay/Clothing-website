@@ -2,27 +2,32 @@ import { User } from '../models/User.js';
 import jwt from 'jsonwebtoken';
 
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || 'blackfits_secret_fallback', {
+  return jwt.sign({ id }, process.env.JWT_SECRET || 'blackfits_secret_key_2026', {
     expiresIn: process.env.JWT_EXPIRE || '30d'
   });
 };
 
-// @desc    Register a new customer
+// @desc    Register a new customer or admin (with optional adminPasscode)
 // @route   POST /api/auth/register
 export const register = async (req, res) => {
   try {
-    const { name, email, password, phone, preferredFit, preferredSize } = req.body;
+    const { name, email, password, phone, preferredFit, preferredSize, adminPasscode } = req.body;
 
-    const userExists = await User.findOne({ email });
+    const userExists = await User.findOne({ email: email.toLowerCase().trim() });
     if (userExists) {
       return res.status(400).json({ success: false, message: 'An account with this email already exists' });
     }
 
+    // Determine role: if secret admin passcode matches, grant admin role
+    const masterAdminPasscode = process.env.ADMIN_PASSCODE || 'BLACKFITS_ADMIN_2026';
+    const role = (adminPasscode && adminPasscode.trim() === masterAdminPasscode) ? 'admin' : 'customer';
+
     const user = await User.create({
-      name,
-      email,
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
       password,
-      phone,
+      phone: phone || '',
+      role,
       preferredFit: preferredFit || 'Oversized',
       preferredSize: preferredSize || 'L'
     });
@@ -51,7 +56,11 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email }).select('+password');
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Please provide both email and password' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password');
     if (!user || !(await user.matchPassword(password))) {
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
@@ -74,11 +83,14 @@ export const login = async (req, res) => {
   }
 };
 
-// @desc    Get current logged in user
+// @desc    Get current authenticated user
 // @route   GET /api/auth/me
 export const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
     res.json({ success: true, user });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

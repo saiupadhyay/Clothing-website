@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { Product } from './models/Product.js';
 import { LookbookPost } from './models/LookbookPost.js';
+import { User } from './models/User.js';
 import { connectDB } from './config/db.js';
 
 dotenv.config();
@@ -177,6 +178,41 @@ const seedData = async () => {
 
     await LookbookPost.insertMany(lookbookData);
     console.log(`✅ Seeded ${lookbookData.length} Lookbook Posts!`);
+
+    // Seed default Admin & Customer accounts
+    await User.deleteMany();
+    const adminUser = await User.create({
+      name: 'BlackFits Executive',
+      email: 'admin@blackfits.com',
+      password: 'Admin@BlackFits2026',
+      role: 'admin',
+      preferredFit: 'Oversized',
+      preferredSize: 'L'
+    });
+
+    const customerUser = await User.create({
+      name: 'Alex Vance',
+      email: 'alex.vance@blackfits.com',
+      password: 'Password@123',
+      role: 'customer',
+      preferredFit: 'Oversized',
+      preferredSize: 'L',
+      addresses: [
+        {
+          name: 'Alex Vance',
+          street: '742 Evergreen Onyx District, Apt 4B',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+          postalCode: '400001',
+          country: 'India',
+          phone: '+91 98765 43210',
+          isDefault: true
+        }
+      ]
+    });
+
+    console.log(`✅ Seeded Admin Account: ${adminUser.email} (Role: ${adminUser.role})`);
+    console.log(`✅ Seeded Demo Customer Account: ${customerUser.email}`);
 
     console.log('🎉 Database seeding complete!');
     process.exit(0);

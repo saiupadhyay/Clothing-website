@@ -25,7 +25,9 @@ import {
   Loader2,
   Camera,
   Heart,
-  RotateCcw
+  RotateCcw,
+  ShieldAlert,
+  Lock
 } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
 import { Product, OrderStatus, FitType, SizeType, LookbookPost } from '../types';
@@ -104,7 +106,11 @@ export const AdminPanel: React.FC = () => {
     addLookbookPost,
     updateLookbookPost,
     deleteLookbookPost,
-    resetLookbookPosts
+    resetLookbookPosts,
+    isAdmin,
+    setAuthModalOpen,
+    setAuthMode,
+    setAdminLoginIntent
   } = useShop();
 
   const [adminTab, setAdminTab] = useState<'analytics' | 'inventory' | 'orders' | 'lookbook'>('analytics');
@@ -385,6 +391,63 @@ export const AdminPanel: React.FC = () => {
       p.name.toLowerCase().includes(inventorySearch.toLowerCase()) ||
       p.fit.toLowerCase().includes(inventorySearch.toLowerCase())
   );
+
+  // Executive Access Guard - only users with role === 'admin' can access
+  if (!isAdmin) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-20 text-center space-y-6">
+        <div className="w-20 h-20 rounded-3xl bg-zinc-900 border border-zinc-800 mx-auto flex items-center justify-center text-amber-400 shadow-2xl">
+          <ShieldAlert className="w-10 h-10" />
+        </div>
+        <div>
+          <span className="text-xs font-mono uppercase tracking-widest text-amber-400 font-bold">
+            EXECUTIVE CLEARANCE REQUIRED
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-heading font-black text-white mt-1">
+            ADMIN COMMAND RESTRICTED
+          </h2>
+          <p className="text-xs font-mono text-zinc-400 mt-2 max-w-md mx-auto leading-relaxed">
+            This terminal gives direct control over MongoDB product inventory, order logistics, and Cloudinary CDN assets. You must be authenticated as an Executive Admin to proceed.
+          </p>
+        </div>
+
+        <div className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 max-w-md mx-auto text-left font-mono text-xs text-zinc-300 space-y-2">
+          <div className="flex justify-between text-[11px] text-zinc-400 border-b border-zinc-800 pb-2">
+            <span>MASTER ADMIN CREDENTIALS:</span>
+            <span className="text-emerald-400 font-bold">Verified in DB</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-zinc-500">Email:</span>
+            <span className="text-white font-bold">admin@blackfits.com</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-zinc-500">Password:</span>
+            <span className="text-amber-400 font-bold">Admin@BlackFits2026</span>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <button
+            onClick={() => {
+              setAdminLoginIntent(true);
+              setAuthMode('login');
+              setAuthModalOpen(true);
+            }}
+            className="w-full sm:w-auto px-8 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-zinc-950 font-heading font-black text-xs tracking-wider uppercase transition-colors shadow-lg shadow-amber-400/20 flex items-center justify-center gap-2"
+          >
+            <Lock className="w-4 h-4" />
+            <span>Sign In As Admin</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('shop')}
+            className="w-full sm:w-auto px-6 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-mono text-zinc-300 transition-colors"
+          >
+            Back to Storefront
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
