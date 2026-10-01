@@ -1,6 +1,20 @@
 import { Product, LookbookPost, Order, OrderStatus, UserProfile } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const getApiBaseUrl = (): string => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  if (
+    typeof window !== 'undefined' &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1'
+  ) {
+    return 'https://blackfits.onrender.com/api';
+  }
+  return 'http://localhost:5000/api';
+};
+
+const API_BASE = getApiBaseUrl();
 
 const TOKEN_KEY = 'bf_auth_token';
 

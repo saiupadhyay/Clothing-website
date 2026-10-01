@@ -38,6 +38,24 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Root Welcome & Health Endpoint
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ONLINE',
+    service: 'BlackFits Luxury Streetwear API',
+    message: 'BlackFits Backend API is live and operational 🚀',
+    database: 'MongoDB Atlas Connected',
+    mediaDelivery: 'Cloudinary CDN',
+    endpoints: {
+      health: '/api/health',
+      products: '/api/products',
+      orders: '/api/orders',
+      auth: '/api/auth',
+      lookbook: '/api/lookbook'
+    }
+  });
+});
+
 // Health Check Endpoint
 app.get('/api/health', (req, res) => {
   res.json({
