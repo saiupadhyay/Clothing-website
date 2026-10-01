@@ -31,6 +31,7 @@ import { useShop } from '../context/ShopContext';
 import { Product, OrderStatus, FitType, SizeType, LookbookPost } from '../types';
 import { compressImage } from '../utils/imageCompressor';
 import { formatPrice } from '../utils/formatPrice';
+import { api } from '../services/api';
 
 const BLACK_TEE_PRESETS = [
   {
@@ -180,10 +181,21 @@ export const AdminPanel: React.FC = () => {
     if (!file) return;
     try {
       setLbIsCompressing(true);
-      setLbNotice(`Optimizing "${file.name}"...`);
-      const result = await compressImage(file, 1200, 0.78);
-      setLbImage(result.dataUrl);
-      setLbNotice(`✓ Ready: ${result.originalSizeKb} KB → ${result.compressedSizeKb} KB`);
+      setLbNotice(`Uploading "${file.name}" to Cloudinary CDN...`);
+
+      let finalUrl = '';
+      try {
+        const cdnRes = await api.uploadImage(file);
+        finalUrl = cdnRes.url;
+        setLbNotice(`✓ Cloudinary CDN Upload Complete!`);
+      } catch (cdnErr) {
+        console.warn('Cloudinary upload error, using local compressed image:', cdnErr);
+        const result = await compressImage(file, 1200, 0.78);
+        finalUrl = result.dataUrl;
+        setLbNotice(`✓ Ready locally: ${result.compressedSizeKb} KB`);
+      }
+
+      setLbImage(finalUrl);
       setTimeout(() => setLbNotice(null), 3500);
     } catch (err) {
       console.error(err);
@@ -229,23 +241,31 @@ export const AdminPanel: React.FC = () => {
 
     try {
       setIsCompressing(true);
-      setUploadNotice(`Optimizing "${file.name}"...`);
+      setUploadNotice(`Uploading "${file.name}" to Cloudinary CDN...`);
 
-      // Downscale to max 1000px and compress to lightweight 75% JPEG (~50-90KB)
-      const result = await compressImage(file, 1000, 0.75);
+      let finalUrl = '';
+      try {
+        const cdnRes = await api.uploadImage(file);
+        finalUrl = cdnRes.url;
+        setUploadNotice(`✓ Cloudinary CDN Upload Complete!`);
+      } catch (cdnErr) {
+        console.warn('Cloudinary upload error, using local compressed image:', cdnErr);
+        const result = await compressImage(file, 1000, 0.75);
+        finalUrl = result.dataUrl;
+        setUploadNotice(`✓ Added locally (${result.compressedSizeKb} KB)`);
+      }
 
       if (isEditing && editingProduct) {
         setEditingProduct({
           ...editingProduct,
-          images: [...editingProduct.images, result.dataUrl]
+          images: [...editingProduct.images, finalUrl]
         });
       } else {
-        setNewProductImages((prev) => [...prev, result.dataUrl]);
+        setNewProductImages((prev) => [...prev, finalUrl]);
       }
-      setUploadNotice(`✓ Added "${file.name}" (optimized: ${result.originalSizeKb} KB → ${result.compressedSizeKb} KB)`);
       setTimeout(() => setUploadNotice(null), 3500);
     } catch (err) {
-      console.error('Image compression failed:', err);
+      console.error('Image upload failed:', err);
       alert('Could not process this image. Please select a standard PNG, JPG, or WEBP file.');
     } finally {
       setIsCompressing(false);
@@ -373,16 +393,16 @@ export const AdminPanel: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-800">
         <div>
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-            <span className="text-xs font-mono uppercase tracking-widest text-amber-400 font-bold">
-              BLACKFITS EXECUTIVE COMMAND
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-xs font-mono uppercase tracking-widest text-emerald-400 font-bold">
+              BLACKFITS EXECUTIVE COMMAND • MONGODB & CLOUDINARY LIVE
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-heading font-black text-white tracking-tight mt-0.5">
             ADMIN & INVENTORY ANALYTICS
           </h1>
           <p className="text-xs text-zinc-400 font-mono mt-0.5">
-            Store Health: Optimal • Active Warehouses: NYC Vault 01 & Queens Depot
+            Store Health: Optimal • Database: MongoDB Atlas (Port 5000) • Media: Cloudinary CDN
           </p>
         </div>
 

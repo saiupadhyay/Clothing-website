@@ -14,6 +14,7 @@ import {
 } from '../types';
 import { INITIAL_PRODUCTS, INITIAL_ORDERS, INITIAL_USER, LOOKBOOK_POSTS } from '../data/mockProducts';
 import { DEFAULT_CAD_IMAGES } from '../data/cadImages';
+import { api } from '../services/api';
 
 interface ShopContextType {
   products: Product[];
@@ -248,21 +249,78 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [lookbookPosts]);
 
-  const addLookbookPost = (post: LookbookPost) => {
+  // Synchronize state with MongoDB Atlas backend API if available
+  useEffect(() => {
+    let isMounted = true;
+
+    const syncFromBackend = async () => {
+      try {
+        const dbProducts = await api.getProducts();
+        if (isMounted && dbProducts && dbProducts.length > 0) {
+          setProducts(dbProducts.map((p) => ({ ...p, fit: normalizeFit(p.fit as string) })));
+        }
+      } catch (e) {
+        // Backend offline or loading, local cache remains active
+      }
+
+      try {
+        const dbLookbook = await api.getLookbook();
+        if (isMounted && dbLookbook && dbLookbook.length > 0) {
+          setLookbookPosts(dbLookbook);
+        }
+      } catch (e) {
+        // Local cache remains active
+      }
+
+      try {
+        const dbOrders = await api.getOrders();
+        if (isMounted && dbOrders && dbOrders.length > 0) {
+          setOrders(dbOrders);
+        }
+      } catch (e) {
+        // Local cache remains active
+      }
+    };
+
+    syncFromBackend();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const addLookbookPost = async (post: LookbookPost) => {
     setLookbookPosts((prev) => [post, ...prev]);
+    try {
+      const created = await api.createLookbookPost(post);
+      if (created && created.id) {
+        setLookbookPosts((prev) => prev.map((p) => (p.id === post.id ? created : p)));
+      }
+    } catch (err) {
+      console.warn('API sync failed, saved lookbook locally:', err);
+    }
   };
 
-  const updateLookbookPost = (updated: LookbookPost) => {
+  const updateLookbookPost = async (updated: LookbookPost) => {
     setLookbookPosts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
     if (selectedLookbook?.id === updated.id) {
       setSelectedLookbook(updated);
     }
+    try {
+      await api.updateLookbookPost(updated.id, updated);
+    } catch (err) {
+      console.warn('API sync failed, updated lookbook locally:', err);
+    }
   };
 
-  const deleteLookbookPost = (id: string) => {
+  const deleteLookbookPost = async (id: string) => {
     setLookbookPosts((prev) => prev.filter((p) => p.id !== id));
     if (selectedLookbook?.id === id) {
       setSelectedLookbook(null);
+    }
+    try {
+      await api.deleteLookbookPost(id);
+    } catch (err) {
+      console.warn('API sync failed, deleted lookbook locally:', err);
     }
   };
 
@@ -500,6 +558,11 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Add to orders
     setOrders((prev) => [newOrder, ...prev]);
 
+    // Sync order to MongoDB Atlas in background
+    api.createOrder(newOrder).catch((err) => {
+      console.warn('Order saved locally, MongoDB sync notice:', err);
+    });
+
     // Clear cart
     clearCart();
     setAppliedCoupon(null);
@@ -537,17 +600,35 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   };
 
-  // Admin Actions
-  const addProduct = (newProduct: Product) => {
+  // Admin Actions with MongoDB Atlas synchronization
+  const addProduct = async (newProduct: Product) => {
     setProducts((prev) => [newProduct, ...prev]);
+    try {
+      const created = await api.createProduct(newProduct);
+      if (created && created.id) {
+        setProducts((prev) => prev.map((p) => (p.id === newProduct.id ? created : p)));
+      }
+    } catch (err) {
+      console.warn('API sync failed, saved product locally:', err);
+    }
   };
 
-  const updateProduct = (updated: Product) => {
+  const updateProduct = async (updated: Product) => {
     setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    try {
+      await api.updateProduct(updated.id, updated);
+    } catch (err) {
+      console.warn('API sync failed, updated product locally:', err);
+    }
   };
 
-  const deleteProduct = (productId: string) => {
+  const deleteProduct = async (productId: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== productId));
+    try {
+      await api.deleteProduct(productId);
+    } catch (err) {
+      console.warn('API sync failed, deleted product locally:', err);
+    }
   };
 
   const updateOrderStatus = (orderId: string, status: OrderStatus) => {
@@ -575,11 +656,13 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
         });
 
-        return {
+        const updatedOrder = {
           ...order,
           status,
           trackingSteps: updatedSteps,
         };
+        api.updateOrderStatus(orderId, status).catch(() => {});
+        return updatedOrder;
       })
     );
   };
