@@ -105,9 +105,9 @@ export const UserDashboard: React.FC = () => {
       name: newAddrName || `${currentUser.name} (Address)`,
       street: newAddrStreet,
       city: newAddrCity,
-      state: newAddrState || 'NY',
+      state: newAddrState || 'Maharashtra',
       postalCode: newAddrZip,
-      country: 'United States',
+      country: 'India',
       phone: newAddrPhone || currentUser.phone,
       isDefault: false
     });
@@ -613,7 +613,7 @@ export const UserDashboard: React.FC = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <div>
                     <label className="text-[11px] font-mono text-zinc-400 block mb-1">City</label>
                     <input
@@ -621,18 +621,29 @@ export const UserDashboard: React.FC = () => {
                       required
                       value={newAddrCity}
                       onChange={(e) => setNewAddrCity(e.target.value)}
-                      placeholder="New York"
+                      placeholder="Mumbai"
                       className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-white"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-mono text-zinc-400 block mb-1">Zip Code</label>
+                    <label className="text-[11px] font-mono text-zinc-400 block mb-1">State</label>
+                    <input
+                      type="text"
+                      required
+                      value={newAddrState}
+                      onChange={(e) => setNewAddrState(e.target.value)}
+                      placeholder="Maharashtra"
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-mono text-zinc-400 block mb-1">PIN Code</label>
                     <input
                       type="text"
                       required
                       value={newAddrZip}
                       onChange={(e) => setNewAddrZip(e.target.value)}
-                      placeholder="10001"
+                      placeholder="400050"
                       className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-white"
                     />
                   </div>

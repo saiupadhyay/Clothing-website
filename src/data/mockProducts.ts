@@ -280,30 +280,30 @@ export const INITIAL_PRODUCTS: Product[] = [
 export const INITIAL_USER: UserProfile = {
   name: 'Alex Vance',
   email: 'alex.vance@blackfits.com',
-  phone: '+1 (555) 382-9012',
+  phone: '+91 98201 44520',
   preferredFit: 'Oversized',
   preferredSize: 'L',
   addresses: [
     {
       id: 'addr-1',
-      name: 'Alex Vance (Studio)',
-      street: '742 Evergreen Onyx District, Apt 4B',
-      city: 'Brooklyn',
-      state: 'New York',
-      postalCode: '11201',
-      country: 'United States',
-      phone: '+1 (555) 382-9012',
+      name: 'Alex Vance (Primary Studio)',
+      street: 'Flat 402, Obsidian Heights, Bandra West',
+      city: 'Mumbai',
+      state: 'Maharashtra',
+      postalCode: '400050',
+      country: 'India',
+      phone: '+91 98201 44520',
       isDefault: true
     },
     {
       id: 'addr-2',
-      name: 'Alex Vance (Office)',
-      street: '100 Obsidian Avenue, Floor 12',
-      city: 'Manhattan',
-      state: 'New York',
-      postalCode: '10013',
-      country: 'United States',
-      phone: '+1 (555) 382-9012',
+      name: 'Alex Vance (Creative Office)',
+      street: 'Plot 12, 100 Feet Road, Indiranagar',
+      city: 'Bengaluru',
+      state: 'Karnataka',
+      postalCode: '560038',
+      country: 'India',
+      phone: '+91 98201 44520',
       isDefault: false
     }
   ]
@@ -341,13 +341,13 @@ export const INITIAL_ORDERS: Order[] = [
     shippingAddress: INITIAL_USER.addresses[0],
     paymentMethod: 'Credit / Debit Card',
     paymentStatus: 'Paid',
-    trackingNumber: 'BFX-99482103US',
+    trackingNumber: 'BFX-99482103IN',
     carrier: 'Black Express Courier',
     estimatedDelivery: 'Today, by 7:00 PM',
     trackingSteps: [
       { status: 'Order Placed', date: 'Sep 26, 09:30 AM', location: 'Website Checkout', completed: true },
-      { status: 'Quality Check & Packing', date: 'Sep 26, 02:15 PM', location: 'BlackFits Central Vault, NY', completed: true },
-      { status: 'Dispatched', date: 'Sep 27, 07:00 AM', location: 'Logistics Hub, Queens', completed: true },
+      { status: 'Quality Check & Packing', date: 'Sep 26, 02:15 PM', location: 'BlackFits Central Vault, Mumbai', completed: true },
+      { status: 'Dispatched', date: 'Sep 27, 07:00 AM', location: 'National Logistics Hub', completed: true },
       { status: 'Out for Delivery', date: 'Sep 28, 08:45 AM', location: 'Local Delivery Van (Driver: Marco)', completed: true, current: true },
       { status: 'Delivered', date: 'Estimated 7:00 PM', location: 'Front Door / Studio', completed: false }
     ]
@@ -374,13 +374,13 @@ export const INITIAL_ORDERS: Order[] = [
     shippingAddress: INITIAL_USER.addresses[0],
     paymentMethod: 'Apple Pay / Google Pay',
     paymentStatus: 'Paid',
-    trackingNumber: 'BFX-72100492US',
+    trackingNumber: 'BFX-72100492IN',
     carrier: 'Black Express Courier',
     estimatedDelivery: 'Delivered on Sep 14',
     trackingSteps: [
       { status: 'Order Placed', date: 'Sep 12, 11:20 AM', location: 'Website Checkout', completed: true },
-      { status: 'Quality Check & Packing', date: 'Sep 12, 04:00 PM', location: 'BlackFits Central Vault, NY', completed: true },
-      { status: 'Dispatched', date: 'Sep 13, 08:30 AM', location: 'Logistics Hub, Queens', completed: true },
+      { status: 'Quality Check & Packing', date: 'Sep 12, 04:00 PM', location: 'BlackFits Central Vault, Mumbai', completed: true },
+      { status: 'Dispatched', date: 'Sep 13, 08:30 AM', location: 'National Logistics Hub', completed: true },
       { status: 'Out for Delivery', date: 'Sep 14, 09:15 AM', location: 'Local Courier', completed: true },
       { status: 'Delivered', date: 'Sep 14, 02:40 PM', location: 'Delivered to recipient', completed: true, current: true }
     ]

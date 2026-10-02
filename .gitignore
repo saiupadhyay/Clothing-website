@@ -16,6 +16,9 @@ dist-ssr
 !.env.example
 mongo id*.png
 *.zip
+API Keys.txt
+*keys*.txt
+*Keys*.txt
 
 # Editor directories and files
 .vscode/*

@@ -12,9 +12,11 @@ import {
   Lock, 
   Truck, 
   Printer, 
-  Sparkles,
-  MapPin,
-  Clock
+  Sparkles, 
+  MapPin, 
+  Clock,
+  Plus,
+  Check
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useShop } from '../context/ShopContext';
@@ -38,7 +40,7 @@ export const CheckoutModal: React.FC = () => {
 
   const currentUser = user || INITIAL_USER;
 
-  const [step, setStep] = useState<'shipping' | 'delivery' | 'payment' | 'otp' | 'success'>('shipping');
+  const [step, setStep] = useState<'shipping' | 'payment' | 'otp' | 'success'>('shipping');
 
   // Shipping details state
   const [selectedSavedAddrId, setSelectedSavedAddrId] = useState<string>(
@@ -46,17 +48,17 @@ export const CheckoutModal: React.FC = () => {
   );
 
   const [customAddress, setCustomAddress] = useState<Omit<Address, 'id'>>({
-    name: currentUser.name,
-    street: currentUser.addresses?.[0]?.street || '104 Obsidian Street',
-    city: currentUser.addresses?.[0]?.city || 'New York',
-    state: currentUser.addresses?.[0]?.state || 'NY',
-    postalCode: currentUser.addresses?.[0]?.postalCode || '10001',
-    country: 'United States',
-    phone: currentUser.phone || '+1 (555) 392-1002',
+    name: currentUser.name || '',
+    street: currentUser.addresses?.[0]?.street || '',
+    city: currentUser.addresses?.[0]?.city || 'Mumbai',
+    state: currentUser.addresses?.[0]?.state || 'Maharashtra',
+    postalCode: currentUser.addresses?.[0]?.postalCode || '400050',
+    country: 'India',
+    phone: currentUser.phone || '+91 98201 44520',
   });
 
-  // Delivery method
-  const [shippingMethod, setShippingMethod] = useState<'standard' | 'express' | 'overnight'>('standard');
+  // Default shipping method is standard courier across all orders
+  const shippingMethod: 'standard' | 'express' | 'overnight' = 'standard';
 
   // Payment method
   const [paymentMethod, setPaymentMethod] = useState<Order['paymentMethod']>('Credit / Debit Card');
@@ -81,8 +83,6 @@ export const CheckoutModal: React.FC = () => {
       : { ...customAddress, id: 'custom-id' };
 
   const getShippingCost = () => {
-    if (shippingMethod === 'overnight') return 250;
-    if (shippingMethod === 'express') return 150;
     return shippingFee;
   };
 
@@ -161,7 +161,7 @@ export const CheckoutModal: React.FC = () => {
 
         {/* Progress Tracker Steps (Hidden on Success) */}
         {step !== 'success' && (
-          <div className="bg-zinc-950 px-6 py-3 border-b border-zinc-850 flex items-center justify-between text-xs font-mono">
+          <div className="bg-zinc-950 px-6 py-3 border-b border-zinc-850 flex items-center justify-center gap-6 sm:gap-12 text-xs font-mono">
             <div className="flex items-center gap-2">
               <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
                 step === 'shipping' ? 'bg-white text-zinc-950' : 'bg-emerald-400 text-zinc-950'
@@ -169,30 +169,17 @@ export const CheckoutModal: React.FC = () => {
                 1
               </span>
               <span className={step === 'shipping' ? 'text-white font-bold' : 'text-zinc-400'}>
-                Shipping Address
+                Delivery Destination
               </span>
             </div>
 
-            <div className="w-8 sm:w-16 h-px bg-zinc-800" />
-
-            <div className="flex items-center gap-2">
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                step === 'delivery' ? 'bg-white text-zinc-950' : step === 'payment' || step === 'otp' ? 'bg-emerald-400 text-zinc-950' : 'bg-zinc-800 text-zinc-400'
-              }`}>
-                2
-              </span>
-              <span className={step === 'delivery' ? 'text-white font-bold' : 'text-zinc-400'}>
-                Shipping Method
-              </span>
-            </div>
-
-            <div className="w-8 sm:w-16 h-px bg-zinc-800" />
+            <div className="w-12 sm:w-24 h-px bg-zinc-800" />
 
             <div className="flex items-center gap-2">
               <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
                 step === 'payment' || step === 'otp' ? 'bg-white text-zinc-950' : 'bg-zinc-800 text-zinc-400'
               }`}>
-                3
+                2
               </span>
               <span className={step === 'payment' || step === 'otp' ? 'text-white font-bold' : 'text-zinc-400'}>
                 Payment Gateway
@@ -206,7 +193,7 @@ export const CheckoutModal: React.FC = () => {
           <div className="p-6 space-y-6">
             <div>
               <h3 className="font-heading font-bold text-base text-white mb-1">Select Delivery Address</h3>
-              <p className="text-xs text-zinc-400 font-mono">Choose a saved address or enter a new destination</p>
+              <p className="text-xs text-zinc-400 font-mono">Choose a saved Indian address or enter a new destination</p>
             </div>
 
             {/* Saved Addresses list */}
@@ -215,23 +202,32 @@ export const CheckoutModal: React.FC = () => {
                 <div
                   key={addr.id}
                   onClick={() => setSelectedSavedAddrId(addr.id)}
-                  className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                  className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between ${
                     selectedSavedAddrId === addr.id
                       ? 'bg-zinc-900 border-white shadow-md ring-1 ring-white'
                       : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-heading font-bold text-sm text-white">{addr.name}</span>
-                    {addr.isDefault && (
-                      <span className="text-[9px] font-mono bg-zinc-800 text-zinc-300 px-1.5 py-0.5 rounded">
-                        Default
-                      </span>
-                    )}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                          selectedSavedAddrId === addr.id ? 'border-white bg-white text-zinc-950' : 'border-zinc-600'
+                        }`}>
+                          {selectedSavedAddrId === addr.id && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                        </div>
+                        <span className="font-heading font-bold text-sm text-white">{addr.name}</span>
+                      </div>
+                      {addr.isDefault && (
+                        <span className="text-[9px] font-mono bg-zinc-800 text-zinc-300 px-1.5 py-0.5 rounded">
+                          Default
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-zinc-400">{addr.street}</p>
+                    <p className="text-xs text-zinc-400">{addr.city}, {addr.state} {addr.postalCode}</p>
                   </div>
-                  <p className="text-xs text-zinc-400">{addr.street}</p>
-                  <p className="text-xs text-zinc-400">{addr.city}, {addr.state} {addr.postalCode}</p>
-                  <p className="text-[11px] font-mono text-zinc-500 mt-1">{addr.phone}</p>
+                  <p className="text-[11px] font-mono text-zinc-500 mt-2">{addr.phone}</p>
                 </div>
               ))}
 
@@ -244,163 +240,138 @@ export const CheckoutModal: React.FC = () => {
                     : 'bg-zinc-900/20 border-zinc-800 border-dashed hover:border-zinc-700'
                 }`}
               >
-                <MapPin className="w-5 h-5 text-zinc-400 mb-1" />
-                <span className="text-xs font-bold text-white">Enter New Custom Address</span>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                    selectedSavedAddrId === 'custom' ? 'border-white bg-white text-zinc-950' : 'border-zinc-600'
+                  }`}>
+                    {selectedSavedAddrId === 'custom' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                  </div>
+                  <span className="text-xs font-bold text-white">Enter New Custom Address</span>
+                </div>
+                <p className="text-[11px] text-zinc-500">Deliver to a different destination across India</p>
               </div>
             </div>
 
             {/* If Custom Address selected, show form inputs */}
             {selectedSavedAddrId === 'custom' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 text-xs">
-                <div>
-                  <label className="text-[11px] font-mono text-zinc-400 block mb-1">Recipient Name</label>
-                  <input
-                    type="text"
-                    value={customAddress.name}
-                    onChange={(e) => setCustomAddress({ ...customAddress, name: e.target.value })}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-white"
-                  />
+              <div className="space-y-3 p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 text-xs">
+                <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2">
+                  <span className="font-heading font-bold text-xs uppercase text-zinc-200">New Delivery Destination</span>
+                  <span className="text-[10px] font-mono text-zinc-500">India Shipping Only</span>
                 </div>
-                <div>
-                  <label className="text-[11px] font-mono text-zinc-400 block mb-1">Contact Phone</label>
-                  <input
-                    type="text"
-                    value={customAddress.phone}
-                    onChange={(e) => setCustomAddress({ ...customAddress, phone: e.target.value })}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-white"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="text-[11px] font-mono text-zinc-400 block mb-1">Street Address</label>
-                  <input
-                    type="text"
-                    value={customAddress.street}
-                    onChange={(e) => setCustomAddress({ ...customAddress, street: e.target.value })}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] font-mono text-zinc-400 block mb-1">City</label>
-                  <input
-                    type="text"
-                    value={customAddress.city}
-                    onChange={(e) => setCustomAddress({ ...customAddress, city: e.target.value })}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] font-mono text-zinc-400 block mb-1">Postal Code</label>
-                  <input
-                    type="text"
-                    value={customAddress.postalCode}
-                    onChange={(e) => setCustomAddress({ ...customAddress, postalCode: e.target.value })}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-white"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-mono text-zinc-400 block mb-1">Recipient Name *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Alex Vance"
+                      value={customAddress.name}
+                      onChange={(e) => setCustomAddress({ ...customAddress, name: e.target.value })}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-mono text-zinc-400 block mb-1">Contact Phone *</label>
+                    <input
+                      type="text"
+                      placeholder="+91 98201 44520"
+                      value={customAddress.phone}
+                      onChange={(e) => setCustomAddress({ ...customAddress, phone: e.target.value })}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white transition-colors font-mono"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-[11px] font-mono text-zinc-400 block mb-1">Street Address / Flat / Floor *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Flat 402, Obsidian Heights, Bandra West"
+                      value={customAddress.street}
+                      onChange={(e) => setCustomAddress({ ...customAddress, street: e.target.value })}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-mono text-zinc-400 block mb-1">City *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Mumbai"
+                      value={customAddress.city}
+                      onChange={(e) => setCustomAddress({ ...customAddress, city: e.target.value })}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-mono text-zinc-400 block mb-1">State *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Maharashtra"
+                      value={customAddress.state}
+                      onChange={(e) => setCustomAddress({ ...customAddress, state: e.target.value })}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-mono text-zinc-400 block mb-1">PIN / Postal Code *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 400050"
+                      maxLength={6}
+                      value={customAddress.postalCode}
+                      onChange={(e) => setCustomAddress({ ...customAddress, postalCode: e.target.value })}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white transition-colors font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-mono text-zinc-400 block mb-1">Country</label>
+                    <input
+                      type="text"
+                      disabled
+                      value="India"
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-zinc-400 cursor-not-allowed font-mono"
+                    />
+                  </div>
                 </div>
               </div>
             )}
 
+            {/* Default Standard Courier Notice */}
+            <div className="p-3.5 rounded-2xl bg-zinc-900/50 border border-zinc-800/80 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-zinc-850 flex items-center justify-center text-zinc-300">
+                  <Truck className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-heading font-bold text-xs text-white">Standard Courier Dispatch</span>
+                    <span className="text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded uppercase font-bold">
+                      Default
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-zinc-400">All-India delivery in 3–4 business days with carbon tracking</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-xs font-mono font-bold text-emerald-400">
+                  {shippingFee === 0 ? 'FREE' : formatPrice(shippingFee)}
+                </span>
+              </div>
+            </div>
+
+            {/* Navigation CTA */}
             <div className="flex justify-end pt-4 border-t border-zinc-850">
               <button
-                onClick={() => setStep('delivery')}
-                className="px-6 py-3 rounded-xl bg-white text-zinc-950 font-heading font-black text-xs tracking-wider uppercase hover:bg-zinc-200 transition-all flex items-center gap-2"
+                onClick={() => {
+                  if (selectedSavedAddrId === 'custom') {
+                    if (!customAddress.name.trim() || !customAddress.street.trim() || !customAddress.city.trim() || !customAddress.state.trim() || !customAddress.postalCode.trim()) {
+                      alert('Please fill in all required address fields before proceeding.');
+                      return;
+                    }
+                  }
+                  setStep('payment');
+                }}
+                className="px-6 py-3 rounded-xl bg-white text-zinc-950 font-heading font-black text-xs tracking-wider uppercase hover:bg-zinc-200 transition-all flex items-center gap-2 shadow-lg"
               >
-                <span>Continue to Shipping Method</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 2: SHIPPING METHOD */}
-        {step === 'delivery' && (
-          <div className="p-6 space-y-6">
-            <div>
-              <h3 className="font-heading font-bold text-base text-white mb-1">Select Delivery Tier</h3>
-              <p className="text-xs text-zinc-400 font-mono">Each parcel is dispatched in an air-sealed matte obsidian protective box</p>
-            </div>
-
-            <div className="space-y-3">
-              {/* Standard */}
-              <div
-                onClick={() => setShippingMethod('standard')}
-                className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
-                  shippingMethod === 'standard'
-                    ? 'bg-zinc-900 border-white ring-1 ring-white'
-                    : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-850 flex items-center justify-center text-zinc-300">
-                    <Truck className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-heading font-bold text-sm text-white">Standard Courier Delivery</h4>
-                    <p className="text-xs text-zinc-400">Delivers in 3–4 business days with carbon tracking</p>
-                  </div>
-                </div>
-                <div className="font-mono font-bold text-sm">
-                  {shippingFee === 0 ? <span className="text-emerald-400">FREE</span> : formatPrice(shippingFee)}
-                </div>
-              </div>
-
-              {/* Express Air */}
-              <div
-                onClick={() => setShippingMethod('express')}
-                className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
-                  shippingMethod === 'express'
-                    ? 'bg-zinc-900 border-white ring-1 ring-white'
-                    : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-850 flex items-center justify-center text-amber-400">
-                    <Sparkles className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-heading font-bold text-sm text-white">Obsidian Express Air Priority</h4>
-                    <p className="text-xs text-zinc-400">1–2 business days • Dedicated dispatch queue</p>
-                  </div>
-                </div>
-                <div className="font-mono font-bold text-sm text-white">{formatPrice(150)}</div>
-              </div>
-
-              {/* Same-Day Courier */}
-              <div
-                onClick={() => setShippingMethod('overnight')}
-                className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
-                  shippingMethod === 'overnight'
-                    ? 'bg-zinc-900 border-white ring-1 ring-white'
-                    : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-850 flex items-center justify-center text-zinc-200">
-                    <Clock className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-heading font-bold text-sm text-white">Same-Day Black Courier (Metro)</h4>
-                    <p className="text-xs text-zinc-400">Dispatched immediately by hand courier</p>
-                  </div>
-                </div>
-                <div className="font-mono font-bold text-sm text-white">{formatPrice(250)}</div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-4 border-t border-zinc-850">
-              <button
-                onClick={() => setStep('shipping')}
-                className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white flex items-center gap-1.5"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Back</span>
-              </button>
-
-              <button
-                onClick={() => setStep('payment')}
-                className="px-6 py-3 rounded-xl bg-white text-zinc-950 font-heading font-black text-xs tracking-wider uppercase hover:bg-zinc-200 transition-all flex items-center gap-2"
-              >
-                <span>Continue to Payment</span>
+                <span>Proceed to Payment</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -573,7 +544,7 @@ export const CheckoutModal: React.FC = () => {
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setStep('delivery')}
+                  onClick={() => setStep('shipping')}
                   className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white"
                 >
                   Back
