@@ -7,7 +7,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
-import { FitType } from '../types';
+import { FitType, SizeType } from '../types';
 
 const ALL_FITS: FitType[] = [
   'Standard',
@@ -15,6 +15,8 @@ const ALL_FITS: FitType[] = [
   'BoxyFit',
   'Gym T-shirt'
 ];
+
+const ALL_SIZES: SizeType[] = ['S', 'M', 'L', 'XL', 'XXL'];
 
 export const FilterBar: React.FC = () => {
   const { filters, setFilters, resetFilters, products } = useShop();
@@ -29,8 +31,19 @@ export const FilterBar: React.FC = () => {
     });
   };
 
+  const toggleSize = (size: SizeType) => {
+    setFilters((prev) => {
+      const exists = prev.sizes.includes(size);
+      return {
+        ...prev,
+        sizes: exists ? prev.sizes.filter((s) => s !== size) : [...prev.sizes, size],
+      };
+    });
+  };
+
   const hasActiveFilters = 
     filters.fits.length > 0 || 
+    filters.sizes.length > 0 ||
     filters.search !== '' || 
     filters.inStockOnly;
 
@@ -153,6 +166,41 @@ export const FilterBar: React.FC = () => {
               );
             })}
           </div>
+        </div>
+
+        {/* PROMINENT SIZE FILTER STRIP */}
+        <div className="flex items-center gap-2 pt-2 border-t border-zinc-850/60 overflow-x-auto pb-1 no-scrollbar text-xs font-mono">
+          <span className="text-zinc-400 uppercase text-[11px] whitespace-nowrap mr-1">
+            FILTER SIZE:
+          </span>
+
+          <button
+            onClick={() => setFilters((prev) => ({ ...prev, sizes: [] }))}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all border ${
+              filters.sizes.length === 0
+                ? 'bg-zinc-200 text-zinc-950 border-zinc-200'
+                : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-white'
+            }`}
+          >
+            All Sizes
+          </button>
+
+          {ALL_SIZES.map((size) => {
+            const isSelected = filters.sizes.includes(size);
+            return (
+              <button
+                key={size}
+                onClick={() => toggleSize(size)}
+                className={`px-3 py-1 rounded-lg text-xs font-bold font-mono transition-all border ${
+                  isSelected
+                    ? 'bg-white text-zinc-950 border-white shadow-sm'
+                    : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-white'
+                }`}
+              >
+                {size}
+              </button>
+            );
+          })}
         </div>
 
       </div>

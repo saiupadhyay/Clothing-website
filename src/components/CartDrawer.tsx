@@ -211,21 +211,46 @@ export const CartDrawer: React.FC = () => {
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleApplyCoupon} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={couponInput}
-                    onChange={(e) => setCouponInput(e.target.value)}
-                    placeholder="Enter code (e.g. BLACKFITS15)"
-                    className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600 uppercase font-mono"
-                  />
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-xs font-mono font-bold text-white rounded-xl border border-zinc-700 transition-colors"
-                  >
-                    Apply
-                  </button>
-                </form>
+                <div className="space-y-2">
+                  <div className="bg-gradient-to-r from-zinc-900 via-zinc-900 to-zinc-950 border border-amber-500/30 rounded-xl p-2.5 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-bold text-xs text-amber-300">BLACKFITS15</span>
+                          <span className="text-[9px] font-mono bg-amber-400 text-zinc-950 font-bold px-1.5 py-0.2 rounded">15% OFF</span>
+                        </div>
+                        <span className="text-[10px] text-zinc-400 block">Valid on orders over Rs. 999</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const res = applyCoupon('BLACKFITS15');
+                        setCouponFeedback(res);
+                      }}
+                      className="px-2.5 py-1 bg-amber-400 hover:bg-amber-300 text-zinc-950 font-mono font-bold text-[11px] rounded-lg transition-colors"
+                    >
+                      APPLY
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleApplyCoupon} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value)}
+                      placeholder="Or enter custom promo code"
+                      className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600 uppercase font-mono"
+                    />
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-xs font-mono font-bold text-white rounded-xl border border-zinc-700 transition-colors"
+                    >
+                      Apply
+                    </button>
+                  </form>
+                </div>
               )}
 
               {couponFeedback && (

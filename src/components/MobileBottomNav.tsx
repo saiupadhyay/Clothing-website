@@ -14,7 +14,10 @@ export const MobileBottomNav: React.FC = () => {
     setActiveTab, 
     totalCartItems, 
     setCartOpen, 
-    wishlist 
+    wishlist,
+    openWishlist,
+    activeDashboardSubTab,
+    setActiveDashboardSubTab
   } = useShop();
 
   return (
@@ -50,9 +53,9 @@ export const MobileBottomNav: React.FC = () => {
 
       {/* Wishlist */}
       <button
-        onClick={() => setActiveTab('dashboard')}
+        onClick={openWishlist}
         className={`flex flex-col items-center gap-1 p-1 transition-colors relative ${
-          activeTab === 'dashboard' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
+          activeTab === 'dashboard' && activeDashboardSubTab === 'wishlist' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
         }`}
       >
         <Heart className="w-5 h-5" />
@@ -83,11 +86,12 @@ export const MobileBottomNav: React.FC = () => {
       {/* Account / Dashboard */}
       <button
         onClick={() => {
+          setActiveDashboardSubTab('orders');
           setActiveTab('dashboard');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         className={`flex flex-col items-center gap-1 p-1 transition-colors ${
-          activeTab === 'dashboard' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
+          activeTab === 'dashboard' && activeDashboardSubTab !== 'wishlist' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
         }`}
       >
         <User className="w-5 h-5" />

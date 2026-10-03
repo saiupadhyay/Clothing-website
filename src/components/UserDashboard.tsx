@@ -42,12 +42,16 @@ export const UserDashboard: React.FC = () => {
     products,
     addToCart,
     setActiveTab,
-    setQuickViewProduct
+    setQuickViewProduct,
+    activeDashboardSubTab,
+    setActiveDashboardSubTab,
+    cancelOrder
   } = useShop();
 
   const currentUser = user || INITIAL_USER;
 
-  const [activeSubTab, setActiveSubTab] = useState<'orders' | 'profile' | 'addresses' | 'wishlist'>('orders');
+  const activeSubTab = activeDashboardSubTab;
+  const setActiveSubTab = setActiveDashboardSubTab;
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(orders[0] || null);
   const [copiedTracking, setCopiedTracking] = useState(false);
 
@@ -424,6 +428,52 @@ export const UserDashboard: React.FC = () => {
                     <p className="text-zinc-300 font-bold mt-0.5">{selectedOrder.paymentMethod}</p>
                     <p className="text-emerald-400">Payment Status: {selectedOrder.paymentStatus}</p>
                     <p className="text-zinc-400">Total Billed: {formatPrice(selectedOrder.total)}</p>
+                  </div>
+                </div>
+
+                {/* Customer Order Service Actions */}
+                <div className="pt-3 border-t border-zinc-850 flex flex-wrap items-center justify-between gap-3">
+                  <div className="text-[11px] font-mono text-zinc-500">
+                    Need help with this order? 24/7 Concierge Support available.
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {selectedOrder.status === 'Order Placed' && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to cancel Order #${selectedOrder.id}?`)) {
+                            cancelOrder(selectedOrder.id);
+                            setSelectedOrder({
+                              ...selectedOrder,
+                              status: 'Cancelled',
+                              trackingSteps: [
+                                ...selectedOrder.trackingSteps,
+                                {
+                                  status: 'Cancelled',
+                                  date: 'Just now',
+                                  location: 'Cancelled by customer',
+                                  completed: true,
+                                  current: true,
+                                }
+                              ]
+                            });
+                          }
+                        }}
+                        className="px-3.5 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 border border-rose-800 text-rose-300 text-xs font-mono transition-colors"
+                      >
+                        Cancel Order
+                      </button>
+                    )}
+
+                    <a
+                      href={`https://wa.me/919820144520?text=${encodeURIComponent(`Hi BlackFits Concierge, I need assistance/size exchange for Order #${selectedOrder.id}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-mono transition-colors inline-flex items-center gap-1.5"
+                    >
+                      <span>Request Size Swap / Help</span>
+                      <ExternalLink className="w-3 h-3 text-zinc-400" />
+                    </a>
                   </div>
                 </div>
 

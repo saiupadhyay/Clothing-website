@@ -11,10 +11,19 @@ import { useShop } from '../context/ShopContext';
 import { BrandLogo } from './BrandLogo';
 
 export const Footer: React.FC = () => {
-  const { setActiveTab } = useShop();
+  const { setActiveTab, setFilters, openWishlist, setActiveDashboardSubTab } = useShop();
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const selectSilhouetteAndScroll = (fit: any) => {
+    setFilters((prev) => ({ ...prev, fits: [fit] }));
+    setActiveTab('shop');
+    setTimeout(() => {
+      const el = document.getElementById('product-catalog');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
 
   return (
@@ -98,22 +107,22 @@ export const Footer: React.FC = () => {
             <h5 className="font-mono uppercase text-white font-bold tracking-wider text-xs">SILHOUETTES</h5>
             <ul className="space-y-2 text-zinc-400">
               <li>
-                <button onClick={() => { setActiveTab('shop'); scrollToTop(); }} className="hover:text-white transition-colors">
+                <button onClick={() => selectSilhouetteAndScroll('Standard')} className="hover:text-white transition-colors">
                   Standard Heavyweight Tee (240 GSM)
                 </button>
               </li>
               <li>
-                <button onClick={() => { setActiveTab('shop'); scrollToTop(); }} className="hover:text-white transition-colors">
+                <button onClick={() => selectSilhouetteAndScroll('Oversized')} className="hover:text-white transition-colors">
                   Oversized Dropped Tee (280 GSM)
                 </button>
               </li>
               <li>
-                <button onClick={() => { setActiveTab('shop'); scrollToTop(); }} className="hover:text-white transition-colors">
+                <button onClick={() => selectSilhouetteAndScroll('BoxyFit')} className="hover:text-white transition-colors">
                   BoxyFit Architectural (260 GSM)
                 </button>
               </li>
               <li>
-                <button onClick={() => { setActiveTab('shop'); scrollToTop(); }} className="hover:text-white transition-colors">
+                <button onClick={() => selectSilhouetteAndScroll('Gym T-shirt')} className="hover:text-white transition-colors">
                   Gym T-shirt Athletic (230 GSM)
                 </button>
               </li>
@@ -125,17 +134,17 @@ export const Footer: React.FC = () => {
             <h5 className="font-mono uppercase text-white font-bold tracking-wider text-xs">MEMBER SERVICES</h5>
             <ul className="space-y-2 text-zinc-400">
               <li>
-                <button onClick={() => setActiveTab('dashboard')} className="hover:text-white transition-colors">
+                <button onClick={() => { setActiveDashboardSubTab('orders'); setActiveTab('dashboard'); scrollToTop(); }} className="hover:text-white transition-colors">
                   Live Order Tracking Timeline
                 </button>
               </li>
               <li>
-                <button onClick={() => setActiveTab('dashboard')} className="hover:text-white transition-colors">
+                <button onClick={() => { setActiveDashboardSubTab('addresses'); setActiveTab('dashboard'); scrollToTop(); }} className="hover:text-white transition-colors">
                   Manage Delivery Addresses
                 </button>
               </li>
               <li>
-                <button onClick={() => setActiveTab('dashboard')} className="hover:text-white transition-colors">
+                <button onClick={openWishlist} className="hover:text-white transition-colors">
                   Saved Wishlist
                 </button>
               </li>

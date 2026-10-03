@@ -33,7 +33,8 @@ export const Navbar: React.FC = () => {
     setAuthModalOpen,
     setAuthMode,
     setAdminLoginIntent,
-    logout
+    logout,
+    openWishlist
   } = useShop();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -154,7 +155,17 @@ export const Navbar: React.FC = () => {
                     type="text"
                     placeholder="Search heavy tees..."
                     value={filters.search}
-                    onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+                    onChange={(e) => {
+                      const q = e.target.value;
+                      setFilters((prev) => ({ ...prev, search: q }));
+                      if (activeTab !== 'shop') {
+                        setActiveTab('shop');
+                        setTimeout(() => {
+                          const el = document.getElementById('product-catalog');
+                          if (el) el.scrollIntoView({ behavior: 'smooth' });
+                        }, 80);
+                      }
+                    }}
                     className="bg-transparent text-xs text-white placeholder-zinc-500 focus:outline-none w-28 sm:w-40"
                     autoFocus
                   />
@@ -178,7 +189,7 @@ export const Navbar: React.FC = () => {
 
             {/* Wishlist */}
             <button
-              onClick={() => setActiveTab('dashboard')}
+              onClick={openWishlist}
               className="p-2 text-zinc-400 hover:text-white rounded-full hover:bg-zinc-800/60 relative transition-colors"
               aria-label="Wishlist"
               title="View Wishlist"
@@ -270,6 +281,17 @@ export const Navbar: React.FC = () => {
                     >
                       <User className="w-3.5 h-3.5 text-zinc-400" />
                       <span>My Orders & Sizing</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        openWishlist();
+                        setUserMenuOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs text-zinc-300 hover:text-white hover:bg-zinc-900 rounded-xl transition-colors flex items-center gap-2"
+                    >
+                      <Heart className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Saved Wishlist ({wishlist.length})</span>
                     </button>
 
                     {isAdmin && (

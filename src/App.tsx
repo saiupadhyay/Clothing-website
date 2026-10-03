@@ -14,6 +14,7 @@ import { AdminPanel } from './components/AdminPanel';
 import { LookbookFeed } from './components/LookbookFeed';
 import { NewsletterSection } from './components/NewsletterSection';
 import { MobileBottomNav } from './components/MobileBottomNav';
+import { ConciergeWidget } from './components/ConciergeWidget';
 import { Footer } from './components/Footer';
 
 const AppContent: React.FC = () => {
@@ -70,6 +71,9 @@ const AppContent: React.FC = () => {
 
       {/* Mobile App Navigation Bar */}
       <MobileBottomNav />
+
+      {/* Floating 24/7 WhatsApp Concierge */}
+      <ConciergeWidget />
 
       {/* Footer */}
       <Footer />

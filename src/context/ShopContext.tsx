@@ -35,6 +35,10 @@ interface ShopContextType {
   logout: () => void;
   activeTab: 'shop' | 'dashboard' | 'admin' | 'lookbook';
   setActiveTab: (tab: 'shop' | 'dashboard' | 'admin' | 'lookbook') => void;
+  activeDashboardSubTab: 'orders' | 'profile' | 'addresses' | 'wishlist';
+  setActiveDashboardSubTab: (tab: 'orders' | 'profile' | 'addresses' | 'wishlist') => void;
+  openWishlist: () => void;
+  cancelOrder: (orderId: string) => void;
   cartOpen: boolean;
   setCartOpen: (open: boolean) => void;
   checkoutOpen: boolean;
@@ -251,6 +255,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Modals and UI state
   const [activeTab, setActiveTab] = useState<'shop' | 'dashboard' | 'admin' | 'lookbook'>('shop');
+  const [activeDashboardSubTab, setActiveDashboardSubTab] = useState<'orders' | 'profile' | 'addresses' | 'wishlist'>('orders');
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [billModalOpen, setBillModalOpen] = useState(false);
@@ -258,6 +263,36 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [selectedLookbook, setSelectedLookbook] = useState<LookbookPost | null>(null);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; percent: number } | null>(null);
+
+  const openWishlist = () => {
+    setActiveDashboardSubTab('wishlist');
+    setActiveTab('dashboard');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cancelOrder = (orderId: string) => {
+    setOrders((prev) =>
+      prev.map((ord) => {
+        if (ord.id === orderId) {
+          return {
+            ...ord,
+            status: 'Cancelled' as OrderStatus,
+            trackingSteps: [
+              ...ord.trackingSteps,
+              {
+                status: 'Cancelled' as OrderStatus,
+                date: 'Order Cancelled by Customer',
+                location: 'Website Terminal',
+                completed: true,
+                current: true,
+              },
+            ],
+          };
+        }
+        return ord;
+      })
+    );
+  };
 
   // CAD Visualizer custom images
   const [cadImages, setCadImages] = useState<CadImagesConfig>(() => {
@@ -613,7 +648,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         {
           status: 'Quality Check & Packing',
           date: 'Scheduled',
-          location: 'Obsidian Vault 01, NY',
+          location: 'BlackFits Central Vault, Mumbai',
           completed: false,
         },
         {
@@ -811,6 +846,10 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         activeTab,
         setActiveTab,
+        activeDashboardSubTab,
+        setActiveDashboardSubTab,
+        openWishlist,
+        cancelOrder,
         cartOpen,
         setCartOpen,
         checkoutOpen,

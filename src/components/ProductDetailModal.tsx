@@ -9,7 +9,11 @@ import {
   Truck, 
   Sparkles,
   HelpCircle,
-  RotateCcw
+  RotateCcw,
+  Star,
+  MapPin,
+  Zap,
+  CheckCircle2
 } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
 import { SizeType } from '../types';
@@ -21,7 +25,8 @@ export const ProductDetailModal: React.FC = () => {
     setQuickViewProduct, 
     addToCart, 
     toggleWishlist, 
-    isInWishlist 
+    isInWishlist,
+    setCheckoutOpen
   } = useShop();
 
   const product = quickViewProduct;
@@ -31,6 +36,30 @@ export const ProductDetailModal: React.FC = () => {
   const [quantity, setQuantity] = useState(1);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [addedNotice, setAddedNotice] = useState(false);
+  const [activeDetailTab, setActiveDetailTab] = useState<'features' | 'care' | 'reviews'>('features');
+
+  // Pincode Delivery Estimator
+  const [pincode, setPincode] = useState('');
+  const [pincodeStatus, setPincodeStatus] = useState<{ checked: boolean; valid: boolean; message: string } | null>(null);
+
+  const handleCheckPincode = (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = pincode.trim();
+    if (!/^\d{6}$/.test(clean)) {
+      setPincodeStatus({
+        checked: true,
+        valid: false,
+        message: 'Please enter a valid 6-digit Indian PIN code',
+      });
+      return;
+    }
+    const days = clean.startsWith('4') || clean.startsWith('1') || clean.startsWith('5') ? '2-3 days' : '3-4 days';
+    setPincodeStatus({
+      checked: true,
+      valid: true,
+      message: `Express delivery to ${clean} in ${days} • Free shipping & Cash on Delivery available`,
+    });
+  };
 
   // Fit recommender inputs
   const [calcHeight, setCalcHeight] = useState('5\'10" (178 cm)');
@@ -50,6 +79,13 @@ export const ProductDetailModal: React.FC = () => {
       setAddedNotice(false);
       setQuickViewProduct(null);
     }, 1200);
+  };
+
+  const handleBuyNow = () => {
+    if (currentSizeStock <= 0) return;
+    addToCart(product, selectedSize, quantity);
+    setQuickViewProduct(null);
+    setCheckoutOpen(true);
   };
 
   const getRecommendedSize = (): SizeType => {
@@ -272,9 +308,144 @@ export const ProductDetailModal: React.FC = () => {
               </div>
             )}
 
+            {/* PINCODE DELIVERY CHECKER */}
+            <div className="bg-zinc-900/60 p-3.5 rounded-2xl border border-zinc-800 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-mono text-zinc-300 font-semibold flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-amber-400" />
+                  <span>DELIVERY TIMELINE CHECKER</span>
+                </span>
+                <span className="text-[10px] font-mono text-zinc-500">Pan-India Dispatch</span>
+              </div>
+
+              <form onSubmit={handleCheckPincode} className="flex gap-2">
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Enter 6-digit Indian PIN (e.g. 400001)"
+                  className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white font-mono"
+                />
+                <button
+                  type="submit"
+                  className="px-3.5 py-1.5 bg-zinc-800 hover:bg-zinc-750 text-xs font-mono font-bold text-white rounded-xl transition-colors border border-zinc-700"
+                >
+                  Check
+                </button>
+              </form>
+
+              {pincodeStatus && (
+                <div className={`text-[11px] font-mono p-2 rounded-lg flex items-start gap-1.5 ${
+                  pincodeStatus.valid ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-800/50' : 'bg-rose-950/40 text-rose-300 border border-rose-800/50'
+                }`}>
+                  {pincodeStatus.valid ? <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> : <X className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />}
+                  <span>{pincodeStatus.message}</span>
+                </div>
+              )}
+            </div>
+
+            {/* SPECIFICATION TABS */}
+            <div className="pt-2 border-t border-zinc-850 space-y-2.5">
+              <div className="flex border-b border-zinc-800 text-xs font-mono">
+                <button
+                  onClick={() => setActiveDetailTab('features')}
+                  className={`pb-2 px-2.5 font-bold transition-colors border-b-2 -mb-px ${
+                    activeDetailTab === 'features' ? 'text-white border-white' : 'text-zinc-500 border-transparent hover:text-zinc-300'
+                  }`}
+                >
+                  Features & Fit
+                </button>
+                <button
+                  onClick={() => setActiveDetailTab('care')}
+                  className={`pb-2 px-2.5 font-bold transition-colors border-b-2 -mb-px ${
+                    activeDetailTab === 'care' ? 'text-white border-white' : 'text-zinc-500 border-transparent hover:text-zinc-300'
+                  }`}
+                >
+                  Fabric & Wash Care
+                </button>
+                <button
+                  onClick={() => setActiveDetailTab('reviews')}
+                  className={`pb-2 px-2.5 font-bold transition-colors border-b-2 -mb-px flex items-center gap-1.5 ${
+                    activeDetailTab === 'reviews' ? 'text-white border-white' : 'text-zinc-500 border-transparent hover:text-zinc-300'
+                  }`}
+                >
+                  <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                  <span>Reviews ({product.reviewsCount})</span>
+                </button>
+              </div>
+
+              {activeDetailTab === 'features' && (
+                <ul className="space-y-1 text-xs text-zinc-300 font-sans">
+                  {product.features.map((feat, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 mt-1.5 flex-shrink-0" />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {activeDetailTab === 'care' && (
+                <div className="space-y-2 text-xs text-zinc-300 font-sans">
+                  <p><strong className="text-white font-mono">Composition:</strong> {product.material} ({product.gsm} GSM)</p>
+                  <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-zinc-400 pt-1">
+                    <div className="p-2 rounded bg-zinc-900 border border-zinc-800">
+                      • Cold machine wash (30°C) inside out
+                    </div>
+                    <div className="p-2 rounded bg-zinc-900 border border-zinc-800">
+                      • Tumble dry low or air dry in shade
+                    </div>
+                    <div className="p-2 rounded bg-zinc-900 border border-zinc-800">
+                      • Warm iron on reverse (do not iron print)
+                    </div>
+                    <div className="p-2 rounded bg-zinc-900 border border-zinc-800">
+                      • Pre-shrunk with industrial steam (0% shrink)
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeDetailTab === 'reviews' && (
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center gap-2 p-2 bg-zinc-900/60 rounded-xl border border-zinc-800">
+                    <div className="flex items-center text-amber-400">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className="w-3 h-3 fill-current" />
+                      ))}
+                    </div>
+                    <span className="font-heading font-black text-white">{product.rating} / 5.0</span>
+                    <span className="text-[11px] font-mono text-zinc-400">• Verified BlackFits Owners</span>
+                  </div>
+
+                  <div className="space-y-2 pt-1 text-xs">
+                    <div className="p-2.5 rounded-xl bg-zinc-950 border border-zinc-850">
+                      <div className="flex items-center justify-between text-[11px] text-zinc-400 mb-1">
+                        <span className="font-bold text-white">Arjun M. (Mumbai)</span>
+                        <span className="text-emerald-400 font-mono text-[10px]">Verified Buyer</span>
+                      </div>
+                      <p className="text-zinc-300 text-[11px]">
+                        "The collar stiffness is insane. Washed 5 times and zero sag. 280 GSM gives that heavy streetwear boxy drape perfectly."
+                      </p>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-zinc-950 border border-zinc-850">
+                      <div className="flex items-center justify-between text-[11px] text-zinc-400 mb-1">
+                        <span className="font-bold text-white">Kabir S. (Bengaluru)</span>
+                        <span className="text-emerald-400 font-mono text-[10px]">Verified Buyer</span>
+                      </div>
+                      <p className="text-zinc-300 text-[11px]">
+                        "True obsidian pitch black. Looks very luxurious with silver chains and cargo pants. Definitely ordering two more."
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Quantity & CTA */}
             <div className="space-y-3 pt-2">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
                 {/* Quantity adjuster */}
                 <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-xl px-2 py-1">
                   <button
@@ -298,12 +469,12 @@ export const ProductDetailModal: React.FC = () => {
                 <button
                   disabled={currentSizeStock <= 0}
                   onClick={handleAddToCart}
-                  className={`flex-1 py-3 px-6 rounded-xl font-heading font-black text-sm tracking-wider uppercase transition-all flex items-center justify-center gap-2 shadow-lg ${
+                  className={`flex-1 py-3 px-3 rounded-xl font-heading font-black text-xs sm:text-sm tracking-wider uppercase transition-all flex items-center justify-center gap-2 border ${
                     addedNotice
-                      ? 'bg-emerald-500 text-zinc-950'
+                      ? 'bg-emerald-500 text-zinc-950 border-emerald-400'
                       : currentSizeStock <= 0
-                      ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-                      : 'bg-white text-zinc-950 hover:bg-zinc-200 hover:shadow-white/10'
+                      ? 'bg-zinc-850 text-zinc-500 cursor-not-allowed border-zinc-800'
+                      : 'bg-zinc-900 hover:bg-zinc-800 text-white border-zinc-700 hover:border-zinc-500'
                   }`}
                 >
                   {addedNotice ? (
@@ -314,21 +485,35 @@ export const ProductDetailModal: React.FC = () => {
                   ) : (
                     <>
                       <ShoppingBag className="w-4 h-4" />
-                      <span>{currentSizeStock <= 0 ? 'OUT OF STOCK' : `ADD TO BAG • ${formatPrice(product.price * quantity)}`}</span>
+                      <span>{currentSizeStock <= 0 ? 'OUT OF STOCK' : `ADD TO BAG`}</span>
                     </>
                   )}
+                </button>
+
+                {/* 1-Click Express BUY NOW Button */}
+                <button
+                  disabled={currentSizeStock <= 0}
+                  onClick={handleBuyNow}
+                  className={`flex-1 py-3 px-3 rounded-xl font-heading font-black text-xs sm:text-sm tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 shadow-xl ${
+                    currentSizeStock <= 0
+                      ? 'opacity-40 cursor-not-allowed bg-zinc-800 text-zinc-500'
+                      : 'bg-white text-zinc-950 hover:bg-zinc-200'
+                  }`}
+                >
+                  <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
+                  <span>BUY NOW</span>
                 </button>
 
                 {/* Wishlist toggle */}
                 <button
                   onClick={() => toggleWishlist(product.id)}
-                  className={`w-12 h-12 rounded-xl flex items-center justify-center border transition-all ${
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center border transition-all flex-shrink-0 ${
                     isFavorited
                       ? 'bg-rose-600 border-rose-500 text-white'
                       : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
                   }`}
                 >
-                  <Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} />
+                  <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
                 </button>
               </div>
 
