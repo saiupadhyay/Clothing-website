@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { 
   Product, 
   CartItem, 
@@ -211,7 +211,10 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('bf_user', JSON.stringify(userProfile));
       return { success: true };
     } catch (err: any) {
-      return { success: false, message: err.message || 'Login failed' };
+      const msg = err.message?.toLowerCase().includes('fetch')
+        ? 'Cloud server is waking up from idle. Please wait 10 seconds and try again.'
+        : (err.message || 'Login failed');
+      return { success: false, message: msg };
     }
   };
 
@@ -228,7 +231,10 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('bf_user', JSON.stringify(userProfile));
       return { success: true };
     } catch (err: any) {
-      return { success: false, message: err.message || 'Registration failed' };
+      const msg = err.message?.toLowerCase().includes('fetch')
+        ? 'Cloud server is waking up from idle. Please wait 10 seconds and try again.'
+        : (err.message || 'Registration failed');
+      return { success: false, message: msg };
     }
   };
 
@@ -333,43 +339,47 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [lookbookPosts]);
 
   // Synchronize state with MongoDB Atlas backend API if available
-  useEffect(() => {
-    let isMounted = true;
-
-    const syncFromBackend = async () => {
-      try {
-        const dbProducts = await api.getProducts();
-        if (isMounted && dbProducts && dbProducts.length > 0) {
-          setProducts(dbProducts.map((p) => ({ ...p, fit: normalizeFit(p.fit as string) })));
-        }
-      } catch (e) {
-        // Backend offline or loading, local cache remains active
+  const syncFromBackend = useCallback(async () => {
+    try {
+      const dbProducts = await api.getProducts();
+      if (dbProducts && dbProducts.length > 0) {
+        setProducts(dbProducts.map((p) => ({ ...p, fit: normalizeFit(p.fit as string) })));
       }
+    } catch (e) {
+      // Backend offline or loading, local cache remains active
+    }
 
-      try {
-        const dbLookbook = await api.getLookbook();
-        if (isMounted && dbLookbook && dbLookbook.length > 0) {
-          setLookbookPosts(dbLookbook);
-        }
-      } catch (e) {
-        // Local cache remains active
+    try {
+      const dbLookbook = await api.getLookbook();
+      if (dbLookbook && dbLookbook.length > 0) {
+        setLookbookPosts(dbLookbook);
       }
+    } catch (e) {
+      // Local cache remains active
+    }
 
-      try {
-        const dbOrders = await api.getOrders();
-        if (isMounted && dbOrders && dbOrders.length > 0) {
-          setOrders(dbOrders);
-        }
-      } catch (e) {
-        // Local cache remains active
+    try {
+      const dbOrders = await api.getOrders();
+      if (dbOrders && dbOrders.length > 0) {
+        setOrders(dbOrders);
       }
-    };
-
-    syncFromBackend();
-    return () => {
-      isMounted = false;
-    };
+    } catch (e) {
+      // Local cache remains active
+    }
   }, []);
+
+  // Pre-warm backend and initial sync on mount
+  useEffect(() => {
+    api.checkHealth().catch(() => {});
+    syncFromBackend();
+  }, [syncFromBackend]);
+
+  // Re-sync whenever user logs in or switches roles (e.g. admin panel access)
+  useEffect(() => {
+    if (user) {
+      syncFromBackend();
+    }
+  }, [user, syncFromBackend]);
 
   const addLookbookPost = async (post: LookbookPost) => {
     setLookbookPosts((prev) => [post, ...prev]);

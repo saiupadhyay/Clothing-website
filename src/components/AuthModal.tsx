@@ -47,6 +47,19 @@ export const AuthModal: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [wakingUpNotice, setWakingUpNotice] = useState(false);
+
+  useEffect(() => {
+    let timer: any;
+    if (isLoading) {
+      timer = setTimeout(() => {
+        setWakingUpNotice(true);
+      }, 2500);
+    } else {
+      setWakingUpNotice(false);
+    }
+    return () => clearTimeout(timer);
+  }, [isLoading]);
 
   useEffect(() => {
     setTab(authMode);
@@ -243,9 +256,28 @@ export const AuthModal: React.FC = () => {
 
         {/* Error Alert */}
         {errorMsg && (
-          <div className="mb-4 p-3 bg-rose-950/60 border border-rose-800/80 rounded-xl text-rose-300 text-xs font-mono flex items-center gap-2 animate-in fade-in">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
-            <span>{errorMsg}</span>
+          <div className="mb-4 p-3 bg-rose-950/60 border border-rose-800/80 rounded-xl text-rose-300 text-xs font-mono flex flex-col gap-2 animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
+              <span>{errorMsg}</span>
+            </div>
+            {errorMsg.toLowerCase().includes('waking up') && (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                className="self-end px-3 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 rounded-lg text-[10px] font-bold uppercase transition-colors"
+              >
+                Retry Now
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Waking Up Cloud Server Notice */}
+        {wakingUpNotice && isLoading && (
+          <div className="mb-4 p-3 bg-amber-950/60 border border-amber-800/80 rounded-xl text-amber-300 text-xs font-mono flex items-center gap-2.5 animate-pulse">
+            <Loader2 className="w-4 h-4 animate-spin text-amber-400 shrink-0" />
+            <span>Connecting to cloud database & waking up server instance... Please hold on.</span>
           </div>
         )}
 

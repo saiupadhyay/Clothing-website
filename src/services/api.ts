@@ -50,8 +50,43 @@ const getHeaders = (isJson = true): Record<string, string> => {
   return headers;
 };
 
+/**
+ * Resilient fetch wrapper with automatic retries for cold-start delays and transient network drops on Render.
+ */
+const fetchWithRetry = async (
+  url: string,
+  options: RequestInit = {},
+  retries = 2,
+  delayMs = 2500
+): Promise<Response> => {
+  let lastError: any = null;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      return response;
+    } catch (err: any) {
+      lastError = err;
+      const isNetworkError =
+        err instanceof TypeError ||
+        err.name === 'AbortError' ||
+        err.message?.toLowerCase().includes('fetch') ||
+        err.message?.toLowerCase().includes('network');
+
+      if (attempt < retries && isNetworkError) {
+        console.warn(
+          `[BlackFits API] Connection attempt ${attempt + 1}/${retries + 1} to ${url} failed (likely cold start). Retrying in ${delayMs / 1000}s...`
+        );
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastError || new Error('Network request failed');
+};
+
 export const api = {
-  // --- HEALTH CHECK ---
+  // --- HEALTH CHECK & PRE-WARM ---
   async checkHealth(): Promise<boolean> {
     try {
       const res = await fetch(`${API_BASE}/health`);
@@ -64,17 +99,29 @@ export const api = {
 
   // --- AUTHENTICATION ---
   async login(credentials: { email: string; password: string }): Promise<{ token: string; user: UserProfile }> {
-    const res = await fetch(`${API_BASE}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials)
-    });
-    const json = await res.json();
-    if (!res.ok) {
-      throw new Error(json.message || 'Login failed. Invalid credentials.');
+    try {
+      const res = await fetchWithRetry(
+        `${API_BASE}/auth/login`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(credentials)
+        },
+        2,
+        2500
+      );
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.message || 'Login failed. Invalid credentials.');
+      }
+      authStorage.setToken(json.token);
+      return json;
+    } catch (err: any) {
+      if (err.message?.toLowerCase().includes('fetch') || err instanceof TypeError) {
+        throw new Error('Cloud database server is waking up from idle. Please wait 10 seconds and try again.');
+      }
+      throw err;
     }
-    authStorage.setToken(json.token);
-    return json;
   },
 
   async register(userData: {
@@ -86,31 +133,47 @@ export const api = {
     preferredSize?: string;
     adminPasscode?: string;
   }): Promise<{ token: string; user: UserProfile }> {
-    const res = await fetch(`${API_BASE}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData)
-    });
-    const json = await res.json();
-    if (!res.ok) {
-      throw new Error(json.message || 'Registration failed.');
+    try {
+      const res = await fetchWithRetry(
+        `${API_BASE}/auth/register`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(userData)
+        },
+        2,
+        2500
+      );
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.message || 'Registration failed.');
+      }
+      authStorage.setToken(json.token);
+      return json;
+    } catch (err: any) {
+      if (err.message?.toLowerCase().includes('fetch') || err instanceof TypeError) {
+        throw new Error('Cloud database server is waking up from idle. Please wait 10 seconds and try again.');
+      }
+      throw err;
     }
-    authStorage.setToken(json.token);
-    return json;
   },
 
   async getMe(): Promise<UserProfile | null> {
     const token = authStorage.getToken();
     if (!token) return null;
-    const res = await fetch(`${API_BASE}/auth/me`, {
-      headers: getHeaders()
-    });
-    if (!res.ok) {
-      authStorage.clearToken();
+    try {
+      const res = await fetchWithRetry(`${API_BASE}/auth/me`, {
+        headers: getHeaders()
+      });
+      if (!res.ok) {
+        authStorage.clearToken();
+        return null;
+      }
+      const json = await res.json();
+      return json.user;
+    } catch {
       return null;
     }
-    const json = await res.json();
-    return json.user;
   },
 
   logout(): void {
@@ -119,7 +182,7 @@ export const api = {
 
   // --- PRODUCTS ---
   async getProducts(): Promise<Product[]> {
-    const res = await fetch(`${API_BASE}/products`);
+    const res = await fetchWithRetry(`${API_BASE}/products`, {}, 2, 2000);
     if (!res.ok) throw new Error('Failed to fetch products');
     const json = await res.json();
     return (json.data || []).map((p: any) => ({
@@ -129,7 +192,7 @@ export const api = {
   },
 
   async createProduct(product: Partial<Product>): Promise<Product> {
-    const res = await fetch(`${API_BASE}/products`, {
+    const res = await fetchWithRetry(`${API_BASE}/products`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(product)
@@ -140,7 +203,7 @@ export const api = {
   },
 
   async updateProduct(id: string, product: Partial<Product>): Promise<Product> {
-    const res = await fetch(`${API_BASE}/products/${id}`, {
+    const res = await fetchWithRetry(`${API_BASE}/products/${id}`, {
       method: 'PUT',
       headers: getHeaders(),
       body: JSON.stringify(product)
@@ -151,7 +214,7 @@ export const api = {
   },
 
   async deleteProduct(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/products/${id}`, {
+    const res = await fetchWithRetry(`${API_BASE}/products/${id}`, {
       method: 'DELETE',
       headers: getHeaders()
     });
@@ -160,7 +223,7 @@ export const api = {
 
   // --- LOOKBOOK / STREET ARCHIVE ---
   async getLookbook(): Promise<LookbookPost[]> {
-    const res = await fetch(`${API_BASE}/lookbook`);
+    const res = await fetchWithRetry(`${API_BASE}/lookbook`, {}, 2, 2000);
     if (!res.ok) throw new Error('Failed to fetch lookbook');
     const json = await res.json();
     return (json.data || []).map((p: any) => ({
@@ -170,7 +233,7 @@ export const api = {
   },
 
   async createLookbookPost(post: Partial<LookbookPost>): Promise<LookbookPost> {
-    const res = await fetch(`${API_BASE}/lookbook`, {
+    const res = await fetchWithRetry(`${API_BASE}/lookbook`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(post)
@@ -181,7 +244,7 @@ export const api = {
   },
 
   async updateLookbookPost(id: string, post: Partial<LookbookPost>): Promise<LookbookPost> {
-    const res = await fetch(`${API_BASE}/lookbook/${id}`, {
+    const res = await fetchWithRetry(`${API_BASE}/lookbook/${id}`, {
       method: 'PUT',
       headers: getHeaders(),
       body: JSON.stringify(post)
@@ -192,7 +255,7 @@ export const api = {
   },
 
   async deleteLookbookPost(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/lookbook/${id}`, {
+    const res = await fetchWithRetry(`${API_BASE}/lookbook/${id}`, {
       method: 'DELETE',
       headers: getHeaders()
     });
@@ -201,7 +264,7 @@ export const api = {
 
   // --- ORDERS ---
   async getOrders(): Promise<Order[]> {
-    const res = await fetch(`${API_BASE}/orders`, {
+    const res = await fetchWithRetry(`${API_BASE}/orders`, {
       headers: getHeaders()
     });
     if (!res.ok) throw new Error('Failed to fetch orders');
@@ -213,7 +276,7 @@ export const api = {
   },
 
   async createOrder(orderPayload: any): Promise<Order> {
-    const res = await fetch(`${API_BASE}/orders`, {
+    const res = await fetchWithRetry(`${API_BASE}/orders`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(orderPayload)
@@ -224,7 +287,7 @@ export const api = {
   },
 
   async updateOrderStatus(orderId: string, status: OrderStatus): Promise<Order> {
-    const res = await fetch(`${API_BASE}/orders/${orderId}/status`, {
+    const res = await fetchWithRetry(`${API_BASE}/orders/${orderId}/status`, {
       method: 'PUT',
       headers: getHeaders(),
       body: JSON.stringify({ status })
@@ -245,7 +308,7 @@ export const api = {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const res = await fetch(`${API_BASE}/upload/single`, {
+    const res = await fetchWithRetry(`${API_BASE}/upload/single`, {
       method: 'POST',
       headers,
       body: formData
