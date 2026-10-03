@@ -148,14 +148,19 @@ export const CheckoutModal: React.FC = () => {
             </div>
           </div>
 
-          {step !== 'success' && (
-            <button
-              onClick={() => setCheckoutOpen(false)}
-              className="w-8 h-8 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+          <button
+            onClick={() => {
+              setCheckoutOpen(false);
+              if (step === 'success') {
+                setActiveTab('shop');
+              }
+            }}
+            className="w-8 h-8 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
+            title="Close"
+            aria-label="Close checkout"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Progress Tracker Steps (Hidden on Success) */}
@@ -568,7 +573,22 @@ export const CheckoutModal: React.FC = () => {
 
         {/* STEP 4: ORDER CONFIRMED CELEBRATION */}
         {step === 'success' && confirmedOrder && (
-          <div className="p-8 text-center space-y-6">
+          <div className="p-6 sm:p-8 text-center space-y-6 relative">
+            {/* Top Close Tag */}
+            <div className="flex justify-end -mt-2 -mr-2">
+              <button
+                onClick={() => {
+                  setCheckoutOpen(false);
+                  setActiveTab('shop');
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-white text-xs font-mono transition-colors"
+                title="Return to Home"
+              >
+                <span>Close to Home</span>
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
             <div className="w-16 h-16 rounded-full bg-emerald-500 text-zinc-950 flex items-center justify-center mx-auto shadow-2xl">
               <CheckCircle2 className="w-10 h-10 stroke-[2.5]" />
             </div>
@@ -625,6 +645,17 @@ export const CheckoutModal: React.FC = () => {
                 <Printer className="w-4 h-4" />
                 <span>View Tax Invoice</span>
               </button>
+
+              <button
+                onClick={() => {
+                  setCheckoutOpen(false);
+                  setActiveTab('shop');
+                }}
+                className="w-full sm:w-auto px-5 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs font-mono text-zinc-400 hover:text-white transition-all flex items-center justify-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                <span>Return to Home</span>
+              </button>
             </div>
           </div>
         )}
@@ -639,7 +670,7 @@ export const CheckoutModal: React.FC = () => {
               <div>
                 <h3 className="font-black text-base tracking-widest">BLACKFITS CORP</h3>
                 <p className="text-[10px] text-zinc-600">TAX INVOICE / RECEIPT</p>
-                <p className="text-[10px] text-zinc-600">GST/EIN: US-99482103</p>
+                <p className="text-[10px] text-zinc-600">GSTIN: 27AABCB1234F1Z5 (India)</p>
               </div>
               <button onClick={() => setShowInvoiceModal(false)} className="text-zinc-600 hover:text-black">
                 <X className="w-5 h-5" />
