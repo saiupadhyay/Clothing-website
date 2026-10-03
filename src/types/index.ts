@@ -94,6 +94,12 @@ export interface Address {
   isDefault?: boolean;
 }
 
+export interface SavedCard {
+  cardNumberMasked: string;
+  cardHolder: string;
+  cardExpiry: string;
+}
+
 export interface UserProfile {
   id?: string;
   name: string;
@@ -103,6 +109,9 @@ export interface UserProfile {
   preferredFit: FitType;
   preferredSize: SizeType;
   addresses: Address[];
+  preferredPaymentMethod?: 'Credit / Debit Card' | 'Razorpay / UPI' | 'Apple Pay / Google Pay' | 'Cash on Delivery';
+  savedCard?: SavedCard;
+  savedUpiId?: string;
 }
 
 export interface LookbookPost {

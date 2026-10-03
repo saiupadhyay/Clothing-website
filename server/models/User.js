@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 const addressSchema = new mongoose.Schema({
+  id: { type: String },
   name: { type: String, required: true },
   street: { type: String, required: true },
   city: { type: String, required: true },
@@ -30,7 +31,7 @@ const userSchema = new mongoose.Schema({
     minlength: 6,
     select: false 
   },
-  phone: { type: String },
+  phone: { type: String, default: '' },
   role: { 
     type: String, 
     enum: ['customer', 'admin'], 
@@ -46,7 +47,18 @@ const userSchema = new mongoose.Schema({
     enum: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'], 
     default: 'L' 
   },
-  addresses: [addressSchema]
+  addresses: [addressSchema],
+  preferredPaymentMethod: {
+    type: String,
+    enum: ['Credit / Debit Card', 'Razorpay / UPI', 'Apple Pay / Google Pay', 'Cash on Delivery'],
+    default: 'Credit / Debit Card'
+  },
+  savedCard: {
+    cardNumberMasked: { type: String, default: '' },
+    cardHolder: { type: String, default: '' },
+    cardExpiry: { type: String, default: '' }
+  },
+  savedUpiId: { type: String, default: '' }
 }, { timestamps: true });
 
 // Hash password before saving

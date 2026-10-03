@@ -10,9 +10,10 @@ import {
   FitType,
   OrderStatus,
   LookbookPost,
-  CadImagesConfig 
+  CadImagesConfig,
+  SavedCard
 } from '../types';
-import { INITIAL_PRODUCTS, INITIAL_ORDERS, INITIAL_USER, LOOKBOOK_POSTS } from '../data/mockProducts';
+import { INITIAL_PRODUCTS, LOOKBOOK_POSTS } from '../data/mockProducts';
 import { DEFAULT_CAD_IMAGES } from '../data/cadImages';
 import { api } from '../services/api';
 
@@ -66,10 +67,11 @@ interface ShopContextType {
     paymentMethod: Order['paymentMethod'];
     shippingMethod: 'standard' | 'express' | 'overnight';
   }) => Order;
-  updateProfile: (profile: Partial<UserProfile>) => void;
-  addAddress: (address: Omit<Address, 'id'>) => void;
-  deleteAddress: (id: string) => void;
-  setDefaultAddress: (id: string) => void;
+  updateProfile: (profile: Partial<UserProfile>) => Promise<void>;
+  addAddress: (address: Omit<Address, 'id'>) => Promise<void>;
+  deleteAddress: (id: string) => Promise<void>;
+  setDefaultAddress: (id: string) => Promise<void>;
+  savePaymentPreferences: (paymentMethod: Order['paymentMethod'], savedCard?: SavedCard) => Promise<void>;
   // Admin actions
   addProduct: (product: Product) => void;
   updateProduct: (product: Product) => void;
@@ -151,16 +153,16 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Orders
   const [orders, setOrders] = useState<Order[]>(() => {
     try {
-      const saved = localStorage.getItem('bf_orders');
-      if (saved) {
-        const parsed: Order[] = JSON.parse(saved);
-        return parsed.map((o) => ({
-          ...o,
-          items: o.items.map((i) => ({ ...i, fit: normalizeFit(i.fit as string) }))
-        }));
+      const savedUser = localStorage.getItem('bf_user');
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        if (parsed?.email) {
+          const userOrders = localStorage.getItem(`bf_orders_${parsed.email.toLowerCase().trim()}`);
+          if (userOrders) return JSON.parse(userOrders);
+        }
       }
     } catch (e) {}
-    return INITIAL_ORDERS;
+    return [];
   });
 
   // User Profile & Authentication State
@@ -182,20 +184,65 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAuthenticated = !!user;
   const isAdmin = user?.role === 'admin';
 
+  // Helper to load user-specific orders
+  const loadUserOrders = async (userEmail: string) => {
+    const userOrdersKey = `bf_orders_${userEmail.toLowerCase().trim()}`;
+    let cachedOrders: Order[] = [];
+    try {
+      const saved = localStorage.getItem(userOrdersKey);
+      if (saved) {
+        cachedOrders = JSON.parse(saved);
+        setOrders(cachedOrders);
+      } else {
+        setOrders([]);
+      }
+    } catch (e) {}
+
+    try {
+      const cloudOrders = await api.getMyOrders();
+      if (cloudOrders && cloudOrders.length > 0) {
+        setOrders(cloudOrders);
+        localStorage.setItem(userOrdersKey, JSON.stringify(cloudOrders));
+      } else if (cachedOrders.length === 0) {
+        setOrders([]);
+      }
+    } catch (err) {
+      console.warn('Orders fetched from cache (cloud offline or syncing)');
+    }
+  };
+
   // Verify session on mount with token if present
   useEffect(() => {
     const verifySession = async () => {
       try {
         const me = await api.getMe();
         if (me) {
+          const emailKey = me.email.toLowerCase().trim();
+          let localCachedUser: Partial<UserProfile> = {};
+          try {
+            const cachedStr = localStorage.getItem(`bf_user_${emailKey}`);
+            if (cachedStr) localCachedUser = JSON.parse(cachedStr);
+          } catch (e) {}
+
+          const mergedAddresses = (me.addresses && me.addresses.length > 0)
+            ? me.addresses
+            : (localCachedUser.addresses || []);
+
           const verifiedUser: UserProfile = {
             ...me,
-            preferredFit: normalizeFit(me.preferredFit as string),
-            preferredSize: me.preferredSize || 'L',
-            addresses: me.addresses || []
+            phone: me.phone || localCachedUser.phone || '',
+            preferredFit: normalizeFit((me.preferredFit || localCachedUser.preferredFit) as string),
+            preferredSize: me.preferredSize || localCachedUser.preferredSize || 'L',
+            addresses: mergedAddresses,
+            preferredPaymentMethod: me.preferredPaymentMethod || localCachedUser.preferredPaymentMethod || 'Credit / Debit Card',
+            savedCard: me.savedCard || localCachedUser.savedCard,
+            savedUpiId: me.savedUpiId || localCachedUser.savedUpiId
           };
+
           setUser(verifiedUser);
           localStorage.setItem('bf_user', JSON.stringify(verifiedUser));
+          localStorage.setItem(`bf_user_${emailKey}`, JSON.stringify(verifiedUser));
+          loadUserOrders(me.email);
         }
       } catch (err) {
         // Token invalid or network offline
@@ -207,14 +254,39 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (credentials: { email: string; password: string }) => {
     try {
       const res = await api.login(credentials);
+      const emailKey = res.user.email.toLowerCase().trim();
+
+      let localCachedUser: Partial<UserProfile> = {};
+      try {
+        const cachedStr = localStorage.getItem(`bf_user_${emailKey}`);
+        if (cachedStr) localCachedUser = JSON.parse(cachedStr);
+      } catch (e) {}
+
+      const mergedAddresses = (res.user.addresses && res.user.addresses.length > 0)
+        ? res.user.addresses
+        : (localCachedUser.addresses || []);
+
       const userProfile: UserProfile = {
         ...res.user,
-        preferredFit: normalizeFit(res.user.preferredFit as string),
-        preferredSize: res.user.preferredSize || 'L',
-        addresses: res.user.addresses || []
+        phone: res.user.phone || localCachedUser.phone || '',
+        preferredFit: normalizeFit((res.user.preferredFit || localCachedUser.preferredFit) as string),
+        preferredSize: res.user.preferredSize || localCachedUser.preferredSize || 'L',
+        addresses: mergedAddresses,
+        preferredPaymentMethod: res.user.preferredPaymentMethod || localCachedUser.preferredPaymentMethod || 'Credit / Debit Card',
+        savedCard: res.user.savedCard || localCachedUser.savedCard,
+        savedUpiId: res.user.savedUpiId || localCachedUser.savedUpiId
       };
+
       setUser(userProfile);
       localStorage.setItem('bf_user', JSON.stringify(userProfile));
+      localStorage.setItem(`bf_user_${emailKey}`, JSON.stringify(userProfile));
+
+      if ((!res.user.addresses || res.user.addresses.length === 0) && mergedAddresses.length > 0) {
+        api.updateProfile({ addresses: mergedAddresses }).catch(() => {});
+      }
+
+      loadUserOrders(res.user.email);
+
       return { success: true };
     } catch (err: any) {
       const msg = err.message?.toLowerCase().includes('fetch')
@@ -227,14 +299,22 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (userData: any) => {
     try {
       const res = await api.register(userData);
+      const emailKey = res.user.email.toLowerCase().trim();
+
       const userProfile: UserProfile = {
         ...res.user,
+        phone: userData.phone || res.user.phone || '',
         preferredFit: normalizeFit(res.user.preferredFit as string),
         preferredSize: res.user.preferredSize || 'L',
-        addresses: res.user.addresses || []
+        addresses: [],
+        preferredPaymentMethod: 'Credit / Debit Card'
       };
+
       setUser(userProfile);
       localStorage.setItem('bf_user', JSON.stringify(userProfile));
+      localStorage.setItem(`bf_user_${emailKey}`, JSON.stringify(userProfile));
+      setOrders([]);
+
       return { success: true };
     } catch (err: any) {
       const msg = err.message?.toLowerCase().includes('fetch')
@@ -247,6 +327,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     api.logout();
     setUser(null);
+    setOrders([]);
     localStorage.removeItem('bf_user');
     if (activeTab === 'admin') {
       setActiveTab('shop');
@@ -689,6 +770,15 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Add to orders
     setOrders((prev) => [newOrder, ...prev]);
 
+    // Save under account-specific key if logged in
+    if (user?.email) {
+      try {
+        const emailKey = user.email.toLowerCase().trim();
+        const existingAccountOrders = JSON.parse(localStorage.getItem(`bf_orders_${emailKey}`) || '[]');
+        localStorage.setItem(`bf_orders_${emailKey}`, JSON.stringify([newOrder, ...existingAccountOrders]));
+      } catch (e) {}
+    }
+
     // Sync order to MongoDB Atlas in background
     api.createOrder(newOrder).catch((err) => {
       console.warn('Order saved locally, MongoDB sync notice:', err);
@@ -702,53 +792,147 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // User profile
-  const updateProfile = (profile: Partial<UserProfile>) => {
+  const updateProfile = async (profile: Partial<UserProfile>) => {
+    let updatedUser: UserProfile | null = null;
     setUser((prev) => {
-      const base = prev || INITIAL_USER;
-      const updated: UserProfile = { ...base, ...profile };
+      if (!prev) return null;
+      const updated: UserProfile = { ...prev, ...profile };
+      updatedUser = updated;
       localStorage.setItem('bf_user', JSON.stringify(updated));
+      if (updated.email) {
+        localStorage.setItem(`bf_user_${updated.email.toLowerCase().trim()}`, JSON.stringify(updated));
+      }
       return updated;
     });
+
+    try {
+      await api.updateProfile(profile);
+    } catch (err) {
+      console.warn('Backend profile update failed (saved in local account cache):', err);
+    }
   };
 
-  const addAddress = (newAddr: Omit<Address, 'id'>) => {
+  const addAddress = async (newAddr: Omit<Address, 'id'>) => {
     const id = `addr-${Date.now()}`;
+    let newAddresses: Address[] = [];
+    let updatedUser: UserProfile | null = null;
+
     setUser((prev) => {
-      const base = prev || INITIAL_USER;
+      if (!prev) return null;
+      const isDefault = newAddr.isDefault ?? ((prev.addresses || []).length === 0);
+      const formattedAddr: Address = { ...newAddr, id, isDefault };
+      const currentList = isDefault
+        ? (prev.addresses || []).map((a) => ({ ...a, isDefault: false }))
+        : (prev.addresses || []);
+      newAddresses = [...currentList, formattedAddr];
+
       const updated: UserProfile = {
-        ...base,
-        addresses: [...(base.addresses || []), { ...newAddr, id }],
+        ...prev,
+        addresses: newAddresses,
       };
+      updatedUser = updated;
       localStorage.setItem('bf_user', JSON.stringify(updated));
+      if (updated.email) {
+        localStorage.setItem(`bf_user_${updated.email.toLowerCase().trim()}`, JSON.stringify(updated));
+      }
       return updated;
     });
+
+    if (updatedUser) {
+      try {
+        await api.updateProfile({ addresses: newAddresses });
+      } catch (err) {
+        console.warn('Backend address sync notice:', err);
+      }
+    }
   };
 
-  const deleteAddress = (id: string) => {
+  const deleteAddress = async (id: string) => {
+    let newAddresses: Address[] = [];
+    let updatedUser: UserProfile | null = null;
+
+    setUser((prev) => {
+      if (!prev) return null;
+      newAddresses = (prev.addresses || []).filter((a) => a.id !== id);
+      const updated: UserProfile = {
+        ...prev,
+        addresses: newAddresses,
+      };
+      updatedUser = updated;
+      localStorage.setItem('bf_user', JSON.stringify(updated));
+      if (updated.email) {
+        localStorage.setItem(`bf_user_${updated.email.toLowerCase().trim()}`, JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    if (updatedUser) {
+      try {
+        await api.updateProfile({ addresses: newAddresses });
+      } catch (err) {
+        console.warn('Backend address delete sync notice:', err);
+      }
+    }
+  };
+
+  const setDefaultAddress = async (id: string) => {
+    let newAddresses: Address[] = [];
+    let updatedUser: UserProfile | null = null;
+
+    setUser((prev) => {
+      if (!prev) return null;
+      newAddresses = (prev.addresses || []).map((a) => ({
+        ...a,
+        isDefault: a.id === id,
+      }));
+      const updated: UserProfile = {
+        ...prev,
+        addresses: newAddresses,
+      };
+      updatedUser = updated;
+      localStorage.setItem('bf_user', JSON.stringify(updated));
+      if (updated.email) {
+        localStorage.setItem(`bf_user_${updated.email.toLowerCase().trim()}`, JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    if (updatedUser) {
+      try {
+        await api.updateProfile({ addresses: newAddresses });
+      } catch (err) {
+        console.warn('Backend default address sync notice:', err);
+      }
+    }
+  };
+
+  const savePaymentPreferences = async (paymentMethod: Order['paymentMethod'], savedCard?: SavedCard) => {
+    let updatedUser: UserProfile | null = null;
     setUser((prev) => {
       if (!prev) return null;
       const updated: UserProfile = {
         ...prev,
-        addresses: (prev.addresses || []).filter((a) => a.id !== id),
+        preferredPaymentMethod: paymentMethod,
+        ...(savedCard ? { savedCard } : {}),
       };
+      updatedUser = updated;
       localStorage.setItem('bf_user', JSON.stringify(updated));
+      if (updated.email) {
+        localStorage.setItem(`bf_user_${updated.email.toLowerCase().trim()}`, JSON.stringify(updated));
+      }
       return updated;
     });
-  };
 
-  const setDefaultAddress = (id: string) => {
-    setUser((prev) => {
-      if (!prev) return null;
-      const updated: UserProfile = {
-        ...prev,
-        addresses: (prev.addresses || []).map((a) => ({
-          ...a,
-          isDefault: a.id === id,
-        })),
-      };
-      localStorage.setItem('bf_user', JSON.stringify(updated));
-      return updated;
-    });
+    if (updatedUser) {
+      try {
+        await api.updateProfile({
+          preferredPaymentMethod: paymentMethod,
+          ...(savedCard ? { savedCard } : {}),
+        });
+      } catch (err) {
+        console.warn('Backend payment preferences sync notice:', err);
+      }
+    }
   };
 
   // Admin Actions with MongoDB Atlas synchronization
@@ -877,6 +1061,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addAddress,
         deleteAddress,
         setDefaultAddress,
+        savePaymentPreferences,
         addProduct,
         updateProduct,
         deleteProduct,

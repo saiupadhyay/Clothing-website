@@ -17,11 +17,13 @@ import {
   ArrowRight, 
   ShieldCheck, 
   ChevronRight,
+  CreditCard,
+  Smartphone,
+  Banknote,
   X 
 } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
 import { Order, SizeType, FitType, Address } from '../types';
-import { INITIAL_USER } from '../data/mockProducts';
 import { formatPrice } from '../utils/formatPrice';
 
 export const UserDashboard: React.FC = () => {
@@ -38,6 +40,7 @@ export const UserDashboard: React.FC = () => {
     addAddress, 
     deleteAddress, 
     setDefaultAddress,
+    savePaymentPreferences,
     wishlist,
     products,
     addToCart,
@@ -48,7 +51,15 @@ export const UserDashboard: React.FC = () => {
     cancelOrder
   } = useShop();
 
-  const currentUser = user || INITIAL_USER;
+  const currentUser = user || {
+    name: 'Guest Explorer',
+    email: '',
+    phone: '',
+    preferredFit: 'Oversized' as FitType,
+    preferredSize: 'L' as SizeType,
+    addresses: [],
+    preferredPaymentMethod: 'Credit / Debit Card' as const,
+  };
 
   const activeSubTab = activeDashboardSubTab;
   const setActiveSubTab = setActiveDashboardSubTab;
@@ -61,6 +72,12 @@ export const UserDashboard: React.FC = () => {
   const [phone, setPhone] = useState(currentUser.phone);
   const [preferredFit, setPreferredFit] = useState<FitType>(currentUser.preferredFit);
   const [preferredSize, setPreferredSize] = useState<SizeType>(currentUser.preferredSize);
+  const [preferredPaymentMethod, setPreferredPaymentMethod] = useState<Order['paymentMethod']>(
+    user?.preferredPaymentMethod || 'Credit / Debit Card'
+  );
+  const [cardNumberMasked, setCardNumberMasked] = useState(user?.savedCard?.cardNumberMasked || '•••• •••• •••• 4242');
+  const [cardHolderName, setCardHolderName] = useState(user?.savedCard?.cardHolder || user?.name || '');
+  const [cardExpiry, setCardExpiry] = useState(user?.savedCard?.cardExpiry || '08/29');
   const [profileSavedFeedback, setProfileSavedFeedback] = useState(false);
 
   // Synchronize form fields whenever authenticated user session updates
@@ -71,8 +88,37 @@ export const UserDashboard: React.FC = () => {
       setPhone(user.phone || '');
       setPreferredFit(user.preferredFit || 'Oversized');
       setPreferredSize(user.preferredSize || 'L');
+      setPreferredPaymentMethod(user.preferredPaymentMethod || 'Credit / Debit Card');
+      if (user.savedCard) {
+        setCardNumberMasked(user.savedCard.cardNumberMasked || '•••• •••• •••• 4242');
+        setCardHolderName(user.savedCard.cardHolder || user.name || '');
+        setCardExpiry(user.savedCard.cardExpiry || '08/29');
+      } else {
+        setCardHolderName(user.name || '');
+      }
+    } else {
+      setName('');
+      setEmail('');
+      setPhone('');
+      setPreferredFit('Oversized');
+      setPreferredSize('L');
+      setPreferredPaymentMethod('Credit / Debit Card');
+      setCardNumberMasked('•••• •••• •••• 4242');
+      setCardHolderName('');
+      setCardExpiry('08/29');
     }
   }, [user]);
+
+  // Synchronize selectedOrder when user logs in or switches
+  React.useEffect(() => {
+    if (orders.length > 0) {
+      if (!selectedOrder || !orders.find(o => o.id === selectedOrder.id)) {
+        setSelectedOrder(orders[0]);
+      }
+    } else {
+      setSelectedOrder(null);
+    }
+  }, [orders]);
 
   // Address modal form
   const [showAddAddress, setShowAddAddress] = useState(false);
@@ -89,14 +135,22 @@ export const UserDashboard: React.FC = () => {
     setTimeout(() => setCopiedTracking(false), 2000);
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfile({
+    await updateProfile({
       name,
       email,
       phone,
       preferredFit,
-      preferredSize
+      preferredSize,
+      preferredPaymentMethod,
+      ...(preferredPaymentMethod === 'Credit / Debit Card' ? {
+        savedCard: {
+          cardNumberMasked,
+          cardHolder: cardHolderName.trim().toUpperCase() || name.toUpperCase(),
+          cardExpiry
+        }
+      } : {})
     });
     setProfileSavedFeedback(true);
     setTimeout(() => setProfileSavedFeedback(false), 2500);
@@ -106,7 +160,7 @@ export const UserDashboard: React.FC = () => {
     e.preventDefault();
     if (!newAddrStreet || !newAddrCity) return;
     addAddress({
-      name: newAddrName || `${currentUser.name} (Address)`,
+      name: newAddrName || `${currentUser.name || 'Personal'} Location`,
       street: newAddrStreet,
       city: newAddrCity,
       state: newAddrState || 'Maharashtra',
@@ -554,11 +608,80 @@ export const UserDashboard: React.FC = () => {
               </div>
             </div>
 
+            {/* Preferred Payment Method Section */}
+            <div className="pt-4 border-t border-zinc-800 space-y-4">
+              <div>
+                <h4 className="font-heading font-bold text-sm text-white">DEFAULT PAYMENT GATEWAY</h4>
+                <p className="text-xs text-zinc-400 font-mono">Select your preferred payment gateway remembered with your BlackFits account.</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {[
+                  { id: 'Credit / Debit Card', label: 'Cards (3DS)', icon: CreditCard },
+                  { id: 'Apple Pay / Google Pay', label: 'Apple / G-Pay', icon: Smartphone },
+                  { id: 'Cash on Delivery', label: 'Cash On Hand', icon: Banknote },
+                ].map((m) => {
+                  const Icon = m.icon;
+                  const isSelected = preferredPaymentMethod === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setPreferredPaymentMethod(m.id as any)}
+                      className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                        isSelected
+                          ? 'bg-white text-zinc-950 border-white shadow-md'
+                          : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-zinc-200'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{m.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {preferredPaymentMethod === 'Credit / Debit Card' && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 bg-zinc-950 rounded-2xl border border-zinc-800 text-xs">
+                  <div>
+                    <label className="font-mono text-zinc-400 block mb-1">Masked Card Number</label>
+                    <input
+                      type="text"
+                      value={cardNumberMasked}
+                      onChange={(e) => setCardNumberMasked(e.target.value)}
+                      placeholder="•••• •••• •••• 4242"
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-white font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-mono text-zinc-400 block mb-1">Cardholder Name</label>
+                    <input
+                      type="text"
+                      value={cardHolderName}
+                      onChange={(e) => setCardHolderName(e.target.value)}
+                      placeholder="e.g. Alex Vance"
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-white uppercase"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-mono text-zinc-400 block mb-1">Expiry (MM/YY)</label>
+                    <input
+                      type="text"
+                      value={cardExpiry}
+                      onChange={(e) => setCardExpiry(e.target.value)}
+                      placeholder="08/29"
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-white font-mono"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="pt-4 border-t border-zinc-800 flex items-center justify-between">
               {profileSavedFeedback ? (
                 <span className="text-xs font-mono text-emerald-400 flex items-center gap-1.5">
                   <Check className="w-4 h-4" />
-                  <span>Profile & Sizing Updated!</span>
+                  <span>Profile & Payment Preferences Updated!</span>
                 </span>
               ) : <div />}
 
@@ -587,46 +710,60 @@ export const UserDashboard: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {(currentUser.addresses || []).map((addr) => (
-              <div key={addr.id} className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-4 flex flex-col justify-between space-y-3">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-heading font-bold text-sm text-white">{addr.name}</span>
-                    {addr.isDefault && (
-                      <span className="text-[9px] font-mono bg-zinc-800 text-amber-400 px-1.5 py-0.5 rounded border border-zinc-700">
-                        Default
-                      </span>
+          {(currentUser.addresses || []).length === 0 ? (
+            <div className="p-8 bg-zinc-900/30 rounded-2xl border border-zinc-800 text-center">
+              <MapPin className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
+              <p className="text-xs text-zinc-400">No saved locations found. Add your primary Indian shipping destination for instant 1-click checkout.</p>
+              <button
+                type="button"
+                onClick={() => setShowAddAddress(true)}
+                className="mt-3 px-4 py-2 bg-white text-zinc-950 font-heading font-black text-xs uppercase tracking-wider rounded-xl hover:bg-zinc-200 transition-colors"
+              >
+                Add Your First Address
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {currentUser.addresses.map((addr) => (
+                <div key={addr.id} className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-4 flex flex-col justify-between space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-heading font-bold text-sm text-white">{addr.name}</span>
+                      {addr.isDefault && (
+                        <span className="text-[9px] font-mono bg-zinc-800 text-amber-400 px-1.5 py-0.5 rounded border border-zinc-700">
+                          Default
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-zinc-400">{addr.street}</p>
+                    <p className="text-xs text-zinc-400">{addr.city}, {addr.state} {addr.postalCode}</p>
+                    <p className="text-[11px] font-mono text-zinc-500 mt-1">{addr.phone}</p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-zinc-850">
+                    {!addr.isDefault ? (
+                      <button
+                        onClick={() => setDefaultAddress(addr.id)}
+                        className="text-[11px] font-mono text-zinc-400 hover:text-white underline"
+                      >
+                        Make Default
+                      </button>
+                    ) : <span className="text-[10px] text-zinc-600 font-mono">Primary Delivery Destination</span>}
+
+                    {currentUser.addresses.length > 1 && (
+                      <button
+                        onClick={() => deleteAddress(addr.id)}
+                        className="text-zinc-500 hover:text-rose-400 p-1"
+                        title="Delete Address"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     )}
                   </div>
-                  <p className="text-xs text-zinc-400">{addr.street}</p>
-                  <p className="text-xs text-zinc-400">{addr.city}, {addr.state} {addr.postalCode}</p>
-                  <p className="text-[11px] font-mono text-zinc-500 mt-1">{addr.phone}</p>
                 </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-zinc-850">
-                  {!addr.isDefault ? (
-                    <button
-                      onClick={() => setDefaultAddress(addr.id)}
-                      className="text-[11px] font-mono text-zinc-400 hover:text-white underline"
-                    >
-                      Make Default
-                    </button>
-                  ) : <span className="text-[10px] text-zinc-600 font-mono">Primary Delivery Destination</span>}
-
-                  {(currentUser.addresses || []).length > 1 && (
-                    <button
-                      onClick={() => deleteAddress(addr.id)}
-                      className="text-zinc-500 hover:text-rose-400 p-1"
-                      title="Delete Address"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Add Address Modal Form */}
           {showAddAddress && (

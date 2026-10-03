@@ -19,7 +19,6 @@ import {
 import confetti from 'canvas-confetti';
 import { useShop } from '../context/ShopContext';
 import { Address, Order } from '../types';
-import { INITIAL_USER } from '../data/mockProducts';
 import { formatPrice } from '../utils/formatPrice';
 
 export const CheckoutModal: React.FC = () => {
@@ -35,38 +34,82 @@ export const CheckoutModal: React.FC = () => {
     user,
     placeOrder,
     setActiveTab,
+    addAddress,
+    savePaymentPreferences,
   } = useShop();
-
-  const currentUser = user || INITIAL_USER;
 
   const [step, setStep] = useState<'shipping' | 'payment' | 'otp' | 'success'>('shipping');
 
   // Shipping details state
-  const [selectedSavedAddrId, setSelectedSavedAddrId] = useState<string>(
-    currentUser.addresses?.find((a) => a.isDefault)?.id || currentUser.addresses?.[0]?.id || 'custom'
-  );
+  const [selectedSavedAddrId, setSelectedSavedAddrId] = useState<string>('custom');
 
   const [customAddress, setCustomAddress] = useState<Omit<Address, 'id'>>({
-    name: currentUser.name || '',
-    street: currentUser.addresses?.[0]?.street || '',
-    city: currentUser.addresses?.[0]?.city || 'Mumbai',
-    state: currentUser.addresses?.[0]?.state || 'Maharashtra',
-    postalCode: currentUser.addresses?.[0]?.postalCode || '400050',
+    name: user?.name || '',
+    street: '',
+    city: '',
+    state: '',
+    postalCode: '',
     country: 'India',
-    phone: currentUser.phone || '+91 98201 44520',
+    phone: user?.phone || '',
   });
+
+  const [saveAddressToAccount, setSaveAddressToAccount] = useState(true);
+  const [rememberPaymentMethod, setRememberPaymentMethod] = useState(true);
 
   // Default shipping method is standard courier across all orders
   const shippingMethod: 'standard' | 'express' | 'overnight' = 'standard';
 
   // Payment method
-  const [paymentMethod, setPaymentMethod] = useState<Order['paymentMethod']>('Credit / Debit Card');
+  const [paymentMethod, setPaymentMethod] = useState<Order['paymentMethod']>(
+    user?.preferredPaymentMethod || 'Credit / Debit Card'
+  );
 
   // Card details
-  const [cardNumber, setCardNumber] = useState('4242 •••• •••• 4242');
-  const [cardHolder, setCardHolder] = useState('ALEX VANCE');
-  const [cardExpiry, setCardExpiry] = useState('08/29');
+  const [cardNumber, setCardNumber] = useState(user?.savedCard?.cardNumberMasked || '4242 •••• •••• 4242');
+  const [cardHolder, setCardHolder] = useState(user?.savedCard?.cardHolder || user?.name?.toUpperCase() || '');
+  const [cardExpiry, setCardExpiry] = useState(user?.savedCard?.cardExpiry || '08/29');
   const [cardCvv, setCardCvv] = useState('888');
+
+  // Sync state whenever checkout modal opens or user profile updates
+  React.useEffect(() => {
+    if (checkoutOpen) {
+      setStep('shipping');
+      const userAddrs = user?.addresses || [];
+      const defaultAddr = userAddrs.find((a) => a.isDefault) || userAddrs[0];
+
+      if (defaultAddr) {
+        setSelectedSavedAddrId(defaultAddr.id);
+      } else {
+        setSelectedSavedAddrId('custom');
+      }
+
+      setCustomAddress({
+        name: user?.name || '',
+        street: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: 'India',
+        phone: user?.phone || '',
+      });
+
+      if (user?.preferredPaymentMethod) {
+        setPaymentMethod(user.preferredPaymentMethod);
+      } else {
+        setPaymentMethod('Credit / Debit Card');
+      }
+
+      if (user?.savedCard) {
+        setCardNumber(user.savedCard.cardNumberMasked || '4242 •••• •••• 4242');
+        setCardHolder(user.savedCard.cardHolder || user.name?.toUpperCase() || '');
+        setCardExpiry(user.savedCard.cardExpiry || '08/29');
+      } else {
+        setCardNumber('4242 •••• •••• 4242');
+        setCardHolder(user?.name?.toUpperCase() || '');
+        setCardExpiry('08/29');
+      }
+    }
+  }, [checkoutOpen, user]);
 
   // OTP simulation
   const [otpCode, setOtpCode] = useState('');
@@ -76,9 +119,10 @@ export const CheckoutModal: React.FC = () => {
 
   if (!checkoutOpen) return null;
 
+  const userAddresses = user?.addresses || [];
   const currentAddress: Address =
     selectedSavedAddrId !== 'custom'
-      ? currentUser.addresses?.find((a) => a.id === selectedSavedAddrId) || { ...customAddress, id: 'temp-id' }
+      ? userAddresses.find((a) => a.id === selectedSavedAddrId) || { ...customAddress, id: 'temp-id' }
       : { ...customAddress, id: 'custom-id' };
 
   const getShippingCost = () => {
@@ -121,6 +165,27 @@ export const CheckoutModal: React.FC = () => {
         paymentMethod,
         shippingMethod,
       });
+
+      // Save custom address to account if opted-in and user is authenticated
+      if (user && selectedSavedAddrId === 'custom' && saveAddressToAccount) {
+        addAddress(customAddress).catch(() => {});
+      }
+
+      // Save payment preference to user account if opted-in and user is authenticated
+      if (user && rememberPaymentMethod) {
+        if (paymentMethod === 'Credit / Debit Card') {
+          const rawDigits = cardNumber.replace(/\D/g, '');
+          const last4 = rawDigits.slice(-4) || '4242';
+          savePaymentPreferences('Credit / Debit Card', {
+            cardNumberMasked: `•••• •••• •••• ${last4}`,
+            cardHolder: cardHolder || user.name?.toUpperCase() || '',
+            cardExpiry: cardExpiry || '08/29',
+          }).catch(() => {});
+        } else {
+          savePaymentPreferences(paymentMethod).catch(() => {});
+        }
+      }
+
       setConfirmedOrder(newOrder);
       setStep('success');
       triggerConfetti();
@@ -202,7 +267,7 @@ export const CheckoutModal: React.FC = () => {
 
             {/* Saved Addresses list */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {(currentUser.addresses || []).map((addr) => (
+              {(user?.addresses || []).map((addr) => (
                 <div
                   key={addr.id}
                   onClick={() => setSelectedSavedAddrId(addr.id)}
@@ -334,6 +399,19 @@ export const CheckoutModal: React.FC = () => {
                       className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-zinc-400 cursor-not-allowed font-mono"
                     />
                   </div>
+                  {user && (
+                    <div className="sm:col-span-2 pt-2">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-300">
+                        <input
+                          type="checkbox"
+                          checked={saveAddressToAccount}
+                          onChange={(e) => setSaveAddressToAccount(e.target.checked)}
+                          className="rounded bg-zinc-950 border-zinc-700 text-white focus:ring-0 w-4 h-4 cursor-pointer accent-white"
+                        />
+                        <span>Save this address to my account for future orders</span>
+                      </label>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -495,6 +573,21 @@ export const CheckoutModal: React.FC = () => {
               </div>
             )}
 
+            {/* Remember payment preference toggle */}
+            {user && (
+              <div className="p-3 bg-zinc-900/40 rounded-xl border border-zinc-800/80">
+                <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={rememberPaymentMethod}
+                    onChange={(e) => setRememberPaymentMethod(e.target.checked)}
+                    className="rounded bg-zinc-950 border-zinc-700 text-white focus:ring-0 w-4 h-4 cursor-pointer accent-white"
+                  />
+                  <span>Remember this payment method for my BlackFits account</span>
+                </label>
+              </div>
+            )}
+
             {/* Price Recap & Submit CTA */}
             <div className="pt-4 border-t border-zinc-850 flex items-center justify-between">
               <div>
@@ -541,7 +634,11 @@ export const CheckoutModal: React.FC = () => {
             <div className="space-y-1">
               <h3 className="font-heading font-bold text-lg text-white">3D Secure Bank Verification</h3>
               <p className="text-xs text-zinc-400 max-w-md mx-auto">
-                We sent a simulated 6-digit confirmation code to your linked phone (+91 •••• ••4520) for transaction authorization.
+                We sent a simulated 6-digit confirmation code to your linked phone ({
+                  (currentAddress.phone || user?.phone)
+                    ? `${(currentAddress.phone || user?.phone || '').slice(0, 4)} •••• ••${(currentAddress.phone || user?.phone || '').slice(-4)}`
+                    : '+91 •••• ••4520'
+                }) for transaction authorization.
               </p>
               <div className="pt-2">
                 <span className="font-mono text-xs bg-zinc-900 border border-zinc-700 px-3 py-1 rounded text-zinc-200">

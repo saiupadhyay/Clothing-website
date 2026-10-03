@@ -180,6 +180,20 @@ export const api = {
     authStorage.clearToken();
   },
 
+  async updateProfile(profileData: Partial<UserProfile>): Promise<UserProfile> {
+    const res = await fetchWithRetry(`${API_BASE}/auth/profile`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(profileData)
+    }, 2, 2000);
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      throw new Error(json.message || 'Failed to update profile');
+    }
+    const json = await res.json();
+    return json.user;
+  },
+
   // --- PRODUCTS ---
   async getProducts(): Promise<Product[]> {
     const res = await fetchWithRetry(`${API_BASE}/products`, {}, 2, 2000);
@@ -263,6 +277,37 @@ export const api = {
   },
 
   // --- ORDERS ---
+  async getMyOrders(): Promise<Order[]> {
+    const token = authStorage.getToken();
+    if (!token) return [];
+    try {
+      const res = await fetchWithRetry(`${API_BASE}/orders/my-orders`, {
+        headers: getHeaders()
+      }, 2, 2000);
+      if (!res.ok) return [];
+      const json = await res.json();
+      return (json.data || []).map((o: any) => ({
+        id: o.orderNumber || o._id || o.id,
+        date: o.createdAt ? o.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
+        items: o.items || [],
+        subtotal: o.subtotal,
+        shipping: o.shippingFee || 0,
+        discount: o.discount || 0,
+        total: o.total,
+        status: o.status,
+        shippingAddress: o.shippingAddress,
+        paymentMethod: o.paymentMethod,
+        paymentStatus: o.paymentStatus,
+        trackingNumber: o.trackingNumber,
+        carrier: o.carrier || 'BlackFits Express Logistics',
+        estimatedDelivery: o.estimatedDelivery || '3-4 Business Days',
+        trackingSteps: o.trackingSteps || []
+      }));
+    } catch {
+      return [];
+    }
+  },
+
   async getOrders(): Promise<Order[]> {
     const res = await fetchWithRetry(`${API_BASE}/orders`, {
       headers: getHeaders()

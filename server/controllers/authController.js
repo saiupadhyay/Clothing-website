@@ -39,10 +39,14 @@ export const register = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone || '',
         role: user.role,
         preferredFit: user.preferredFit,
         preferredSize: user.preferredSize,
-        addresses: user.addresses
+        addresses: user.addresses || [],
+        preferredPaymentMethod: user.preferredPaymentMethod || 'Credit / Debit Card',
+        savedCard: user.savedCard || null,
+        savedUpiId: user.savedUpiId || ''
       }
     });
   } catch (error) {
@@ -72,10 +76,14 @@ export const login = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone || '',
         role: user.role,
         preferredFit: user.preferredFit,
         preferredSize: user.preferredSize,
-        addresses: user.addresses
+        addresses: user.addresses || [],
+        preferredPaymentMethod: user.preferredPaymentMethod || 'Credit / Debit Card',
+        savedCard: user.savedCard || null,
+        savedUpiId: user.savedUpiId || ''
       }
     });
   } catch (error) {
@@ -91,8 +99,75 @@ export const getMe = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-    res.json({ success: true, user });
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone || '',
+        role: user.role,
+        preferredFit: user.preferredFit,
+        preferredSize: user.preferredSize,
+        addresses: user.addresses || [],
+        preferredPaymentMethod: user.preferredPaymentMethod || 'Credit / Debit Card',
+        savedCard: user.savedCard || null,
+        savedUpiId: user.savedUpiId || ''
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Update current authenticated user profile & addresses & payment method
+// @route   PUT /api/auth/profile
+export const updateProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const {
+      name,
+      phone,
+      preferredFit,
+      preferredSize,
+      addresses,
+      preferredPaymentMethod,
+      savedCard,
+      savedUpiId
+    } = req.body;
+
+    if (name !== undefined) user.name = name.trim();
+    if (phone !== undefined) user.phone = phone;
+    if (preferredFit !== undefined) user.preferredFit = preferredFit;
+    if (preferredSize !== undefined) user.preferredSize = preferredSize;
+    if (addresses !== undefined) user.addresses = addresses;
+    if (preferredPaymentMethod !== undefined) user.preferredPaymentMethod = preferredPaymentMethod;
+    if (savedCard !== undefined) user.savedCard = savedCard;
+    if (savedUpiId !== undefined) user.savedUpiId = savedUpiId;
+
+    await user.save();
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone || '',
+        role: user.role,
+        preferredFit: user.preferredFit,
+        preferredSize: user.preferredSize,
+        addresses: user.addresses || [],
+        preferredPaymentMethod: user.preferredPaymentMethod || 'Credit / Debit Card',
+        savedCard: user.savedCard || null,
+        savedUpiId: user.savedUpiId || ''
+      }
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
   }
 };
