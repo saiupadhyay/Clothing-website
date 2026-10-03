@@ -39,6 +39,8 @@ interface ShopContextType {
   setCartOpen: (open: boolean) => void;
   checkoutOpen: boolean;
   setCheckoutOpen: (open: boolean) => void;
+  billModalOpen: boolean;
+  setBillModalOpen: (open: boolean) => void;
   quickViewProduct: Product | null;
   setQuickViewProduct: (product: Product | null) => void;
   selectedLookbook: LookbookPost | null;
@@ -251,6 +253,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [activeTab, setActiveTab] = useState<'shop' | 'dashboard' | 'admin' | 'lookbook'>('shop');
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [billModalOpen, setBillModalOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [selectedLookbook, setSelectedLookbook] = useState<LookbookPost | null>(null);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
@@ -812,6 +815,8 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCartOpen,
         checkoutOpen,
         setCheckoutOpen,
+        billModalOpen,
+        setBillModalOpen,
         quickViewProduct,
         setQuickViewProduct,
         selectedLookbook,

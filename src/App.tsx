@@ -8,6 +8,7 @@ import { ProductDetailModal } from './components/ProductDetailModal';
 import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
 import { AuthModal } from './components/AuthModal';
+import { BillModal } from './components/BillModal';
 import { UserDashboard } from './components/UserDashboard';
 import { AdminPanel } from './components/AdminPanel';
 import { LookbookFeed } from './components/LookbookFeed';
@@ -65,6 +66,7 @@ const AppContent: React.FC = () => {
       <CartDrawer />
       <CheckoutModal />
       <AuthModal />
+      <BillModal />
 
       {/* Mobile App Navigation Bar */}
       <MobileBottomNav />

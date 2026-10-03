@@ -26,6 +26,7 @@ export const CheckoutModal: React.FC = () => {
   const {
     checkoutOpen,
     setCheckoutOpen,
+    setBillModalOpen,
     cart,
     cartSubtotal,
     discountAmount,
@@ -494,6 +495,13 @@ export const CheckoutModal: React.FC = () => {
               <div>
                 <span className="text-[11px] font-mono text-zinc-400 block">TOTAL TO PAY:</span>
                 <span className="font-heading font-black text-xl text-white">{formatPrice(finalTotal)}</span>
+                <button
+                  type="button"
+                  onClick={() => setBillModalOpen(true)}
+                  className="block text-[10px] font-mono text-amber-400 hover:text-amber-300 underline mt-0.5"
+                >
+                  View Descriptive Bill Breakdown →
+                </button>
               </div>
 
               <div className="flex items-center gap-2">
@@ -528,7 +536,7 @@ export const CheckoutModal: React.FC = () => {
             <div className="space-y-1">
               <h3 className="font-heading font-bold text-lg text-white">3D Secure Bank Verification</h3>
               <p className="text-xs text-zinc-400 max-w-md mx-auto">
-                We sent a simulated 6-digit confirmation code to your linked phone (+1 •••• ••9012) for transaction authorization.
+                We sent a simulated 6-digit confirmation code to your linked phone (+91 •••• ••4520) for transaction authorization.
               </p>
               <div className="pt-2">
                 <span className="font-mono text-xs bg-zinc-900 border border-zinc-700 px-3 py-1 rounded text-zinc-200">

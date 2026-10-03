@@ -7,7 +7,8 @@ import {
   Sparkles, 
   Tag, 
   ShoppingBag,
-  CreditCard
+  CreditCard,
+  FileText
 } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
 import { formatPrice } from '../utils/formatPrice';
@@ -27,6 +28,7 @@ export const CartDrawer: React.FC = () => {
     applyCoupon,
     removeCoupon,
     setCheckoutOpen,
+    setBillModalOpen,
   } = useShop();
 
   const [couponInput, setCouponInput] = useState('');
@@ -260,6 +262,22 @@ export const CartDrawer: React.FC = () => {
               </div>
             </div>
 
+            {/* View Descriptive Bill / Generate Bill Option */}
+            <button
+              onClick={() => {
+                setBillModalOpen(true);
+              }}
+              className="w-full py-2.5 px-3.5 rounded-xl bg-zinc-900/90 hover:bg-zinc-850 border border-zinc-800 hover:border-zinc-700 text-xs font-mono text-zinc-300 hover:text-white transition-all flex items-center justify-between group shadow-sm"
+            >
+              <div className="flex items-center gap-2">
+                <FileText className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
+                <span className="font-bold">View Descriptive Bill & Breakdown</span>
+              </div>
+              <span className="text-[10px] text-zinc-400 group-hover:text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1 transition-colors">
+                Generate Bill →
+              </span>
+            </button>
+
             {/* Checkout CTA */}
             <button
               onClick={() => {
@@ -280,7 +298,7 @@ export const CartDrawer: React.FC = () => {
                 256-Bit Encrypted
               </span>
               <span>•</span>
-              <span>Razorpay / Cards / UPI</span>
+              <span>Cards / G-Pay / Cash</span>
             </div>
 
           </div>
