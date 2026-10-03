@@ -573,22 +573,7 @@ export const CheckoutModal: React.FC = () => {
 
         {/* STEP 4: ORDER CONFIRMED CELEBRATION */}
         {step === 'success' && confirmedOrder && (
-          <div className="p-6 sm:p-8 text-center space-y-6 relative">
-            {/* Top Close Tag */}
-            <div className="flex justify-end -mt-2 -mr-2">
-              <button
-                onClick={() => {
-                  setCheckoutOpen(false);
-                  setActiveTab('shop');
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-white text-xs font-mono transition-colors"
-                title="Return to Home"
-              >
-                <span>Close to Home</span>
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
+          <div className="p-8 text-center space-y-6">
             <div className="w-16 h-16 rounded-full bg-emerald-500 text-zinc-950 flex items-center justify-center mx-auto shadow-2xl">
               <CheckCircle2 className="w-10 h-10 stroke-[2.5]" />
             </div>
@@ -644,17 +629,6 @@ export const CheckoutModal: React.FC = () => {
               >
                 <Printer className="w-4 h-4" />
                 <span>View Tax Invoice</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setCheckoutOpen(false);
-                  setActiveTab('shop');
-                }}
-                className="w-full sm:w-auto px-5 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs font-mono text-zinc-400 hover:text-white transition-all flex items-center justify-center gap-2"
-              >
-                <X className="w-4 h-4" />
-                <span>Return to Home</span>
               </button>
             </div>
           </div>

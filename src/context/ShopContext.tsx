@@ -571,7 +571,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }): Order => {
     const randomNum = Math.floor(10000 + Math.random() * 90000);
     const orderId = `BF-${randomNum}`;
-    const trackingNum = `BFX-${Math.floor(10000000 + Math.random() * 90000000)}US`;
+    const trackingNum = `BFX-${Math.floor(10000000 + Math.random() * 90000000)}IN`;
     const today = new Date().toISOString().split('T')[0];
 
     const orderItems = cart.map((item) => ({
