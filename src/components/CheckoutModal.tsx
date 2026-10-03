@@ -3,14 +3,12 @@ import {
   X, 
   ShieldCheck, 
   CreditCard, 
-  QrCode, 
   Smartphone, 
   Banknote, 
   CheckCircle2, 
   ArrowRight, 
   ArrowLeft, 
   Lock, 
-  Truck, 
   Printer, 
   Sparkles, 
   MapPin, 
@@ -334,29 +332,6 @@ export const CheckoutModal: React.FC = () => {
               </div>
             )}
 
-            {/* Default Standard Courier Notice */}
-            <div className="p-3.5 rounded-2xl bg-zinc-900/50 border border-zinc-800/80 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-zinc-850 flex items-center justify-center text-zinc-300">
-                  <Truck className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-heading font-bold text-xs text-white">Standard Courier Dispatch</span>
-                    <span className="text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded uppercase font-bold">
-                      Default
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-zinc-400">All-India delivery in 3–4 business days with carbon tracking</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className="text-xs font-mono font-bold text-emerald-400">
-                  {shippingFee === 0 ? 'FREE' : formatPrice(shippingFee)}
-                </span>
-              </div>
-            </div>
-
             {/* Navigation CTA */}
             <div className="flex justify-end pt-4 border-t border-zinc-850">
               <button
@@ -387,10 +362,9 @@ export const CheckoutModal: React.FC = () => {
             </div>
 
             {/* Payment Method Selector Tabs */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               {[
                 { id: 'Credit / Debit Card', label: 'Cards (3DS)', icon: CreditCard },
-                { id: 'Razorpay / UPI', label: 'UPI / QR Scan', icon: QrCode },
                 { id: 'Apple Pay / Google Pay', label: 'Apple / G-Pay', icon: Smartphone },
                 { id: 'Cash on Delivery', label: 'Cash On Hand', icon: Banknote },
               ].map((m) => {
@@ -493,27 +467,7 @@ export const CheckoutModal: React.FC = () => {
               </div>
             )}
 
-            {/* VIEW 2: Razorpay / UPI QR Scan Simulation */}
-            {paymentMethod === 'Razorpay / UPI' && (
-              <div className="p-6 bg-zinc-900/60 rounded-2xl border border-zinc-800 flex flex-col items-center text-center space-y-3">
-                <div className="w-40 h-40 bg-white p-3 rounded-2xl shadow-xl flex items-center justify-center">
-                  {/* Dynamic simulated QR representation */}
-                  <div className="w-full h-full bg-zinc-950 rounded-lg flex flex-col items-center justify-center p-2 text-center">
-                    <QrCode className="w-20 h-20 text-white" />
-                    <span className="text-[8px] font-mono text-zinc-400 mt-1">UPI: blackfits@icici</span>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="font-heading font-bold text-sm text-white">Scan with Any UPI App</div>
-                  <p className="text-xs text-zinc-400 font-mono">Google Pay, PhonePe, Paytm, or CRED</p>
-                  <span className="inline-block bg-zinc-800 text-amber-400 text-[10px] font-mono px-2 py-0.5 rounded">
-                    Session active for 04:45
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* VIEW 3: Apple Pay / Google Pay */}
+            {/* VIEW 2: Apple Pay / Google Pay */}
             {paymentMethod === 'Apple Pay / Google Pay' && (
               <div className="p-6 bg-zinc-900/60 rounded-2xl border border-zinc-800 flex flex-col items-center text-center space-y-3">
                 <Smartphone className="w-12 h-12 text-zinc-300" />
